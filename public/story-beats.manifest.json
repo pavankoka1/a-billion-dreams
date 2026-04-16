@@ -1,0 +1,11 @@
+{
+  "defaultBeat": "duo_finale",
+  "beats": {
+    "sachin_struggle": "story-beats/sachin-young.svg",
+    "sachin_pak_standoff": "story-beats/sachin-pak-standoff.svg",
+    "sachin_drive": "story-beats/sachin-cover-drive.svg",
+    "kohli_fire": "story-beats/kohli-angry.svg",
+    "kohli_carry": "story-beats/kohli-shot-of-century.svg",
+    "duo_finale": "target.svg"
+  }
+}

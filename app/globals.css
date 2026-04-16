@@ -1,0 +1,562 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #13131a;
+  --bg-tertiary: #1a1a24;
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-dim: #3f3f46;
+  --accent-purple: #667eea;
+  --accent-cyan: #4facfe;
+  --glow-purple: rgba(102, 126, 234, 0.4);
+  --glow-blue: rgba(79, 172, 254, 0.35);
+  --stream-purple-soft: rgba(102, 126, 234, 0.22);
+  --stream-cyan-soft: rgba(79, 172, 254, 0.18);
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+html {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+body {
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.story-root {
+  position: relative;
+  min-height: 100vh;
+  --scroll-p: 0.5;
+}
+
+.story-scroll-spacer {
+  width: 100%;
+  pointer-events: none;
+}
+
+.story-stage-main {
+  position: relative;
+  z-index: 30;
+}
+
+.story-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+/* Mobile: upper half = story text only; lower half = particle field (canvas lives in bottom 50%). */
+@media (max-width: 900px) {
+  .story-canvas {
+    top: 50%;
+    height: 50%;
+  }
+
+  .story-center-stage {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  .story-stage-inner--split {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: none;
+    gap: 0;
+  }
+
+  .story-stage-inner--split .story-stage-copy {
+    flex: 0 0 auto;
+    max-height: 50vh;
+    min-height: 0;
+    padding-left: 6%;
+    padding-right: 6%;
+    padding-top: 0.5rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    align-items: center;
+  }
+
+  .story-stage-inner--split .story-stage-dots-gutter {
+    flex: 1 1 auto;
+    min-height: min(42vh, 46dvh);
+    width: 100%;
+  }
+
+  .story-stage-inner--split .story-stage-single {
+    min-height: 0;
+    width: 100%;
+  }
+
+  .story-stage-inner--text-only {
+    max-height: 50vh;
+    margin-top: 0;
+    padding-top: 0.5rem;
+    overflow-y: auto;
+  }
+
+  .story-stage-inner--finale-centered {
+    min-height: 100dvh;
+    justify-content: flex-start;
+    padding-top: 4vh;
+    box-sizing: border-box;
+  }
+
+  .story-stage-inner--finale-centered .story-stage-copy--finale {
+    max-height: 50vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Side stream lines removed from UI — kept class unused if reintroduced */
+.story-streams {
+  display: none;
+}
+
+.story-stream {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: min(20vw, 200px);
+}
+
+.story-stream--left {
+  left: 0;
+}
+
+.story-stream--right {
+  right: 0;
+}
+
+.story-stream__band {
+  position: absolute;
+  inset: 0;
+  display: block;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.story-stream__band--a {
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 18px,
+    var(--stream-purple-soft) 18px,
+    var(--stream-purple-soft) 19px
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, black 40%, black 60%, transparent 100%);
+  animation: story-stream-flow 14s linear infinite;
+}
+
+.story-stream__band--b {
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 42px,
+    var(--stream-cyan-soft) 42px,
+    var(--stream-cyan-soft) 43px
+  );
+  mask-image: linear-gradient(90deg, transparent 5%, black 45%, black 55%, transparent 95%);
+  animation: story-stream-flow 22s linear infinite reverse;
+  opacity: 0.4;
+}
+
+.story-stream--right .story-stream__band--a {
+  animation-duration: 18s;
+}
+
+.story-stream--right .story-stream__band--b {
+  animation-duration: 26s;
+}
+
+@keyframes story-stream-flow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 320px;
+  }
+}
+
+/* —— Fixed stage: left copy + right gutter (WebGL dots only, no <img>) —— */
+.story-center-stage {
+  pointer-events: none;
+}
+
+.story-stage-inner {
+  font-family: var(--font-story), ui-serif, Georgia, serif;
+}
+
+.story-stage-inner--split {
+  width: 100%;
+}
+
+@media (min-width: 901px) {
+  .story-stage-inner--split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(1.25rem, 4vw, 2.75rem);
+    align-items: center;
+  }
+}
+
+.story-stage-inner--text-only {
+  max-width: min(36rem, 92vw);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.story-stage-copy {
+  position: relative;
+  min-width: 0;
+  padding-left: 20%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .story-stage-copy {
+    padding-left: 10%;
+  }
+}
+
+.story-stage-single {
+  position: relative;
+  min-height: min(44vh, 520px);
+}
+
+/** Reserves horizontal space so copy stays left; imagery is only the particle canvas. */
+.story-stage-dots-gutter {
+  min-width: 0;
+  pointer-events: none;
+}
+
+.story-lit-word,
+.story-lit-space {
+  display: inline;
+  white-space: normal;
+}
+
+.story-flip-kicker,
+.story-flip-title,
+.story-flip-line,
+.story-flip-hint {
+  display: block;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.story-flip-kicker {
+  margin: 0 0 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.story-flip-title {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.5rem, 5vw, 2.35rem);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--text-dim);
+}
+
+.story-flip-lines--block {
+  display: block;
+}
+
+.story-flip-lines--block > p + p {
+  margin-top: 0.85rem;
+}
+
+.story-flip-line {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.story-flip-hint {
+  margin: 1.5rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Opening chapter: kicker + lead lines read as a clear headline stack */
+.story-lit-body--opening .story-flip-kicker {
+  font-size: clamp(0.78rem, 1.65vw, 0.92rem);
+  letter-spacing: 0.2em;
+  margin: 0 0 1rem;
+}
+
+.story-lit-body--opening .story-flip-line {
+  font-size: clamp(1.18rem, 3.4vw, 1.72rem);
+  line-height: 1.32;
+  font-weight: 450;
+}
+
+.story-lit-body--opening .story-flip-lines--block > p + p {
+  margin-top: 1rem;
+}
+
+.story-lit-body--opening .story-flip-hint {
+  font-size: 0.78rem;
+  margin-top: 1.85rem;
+  letter-spacing: 0.24em;
+}
+
+/* Finale: centered copy; particles split L/R then morph (no decorative “card”) */
+.story-stage-inner--finale-centered {
+  display: block;
+}
+
+.story-stage-inner--finale-centered .story-stage-copy--finale {
+  padding-left: 0 !important;
+  text-align: center;
+  max-width: 100%;
+}
+
+.story-stage-single--finale {
+  min-height: min(38vh, 440px);
+}
+
+.story-flip-kicker--finale {
+  color: #a5b4fc;
+  text-shadow: 0 0 24px rgba(129, 140, 248, 0.5);
+  animation: none;
+}
+
+.story-flip-title--finale {
+  font-size: clamp(2rem, 8vw, 3.75rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  animation: none;
+}
+
+.story-flip-line--finale {
+  font-size: clamp(0.95rem, 3.2vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e4e4e7;
+  text-shadow:
+    0 0 20px rgba(167, 139, 250, 0.45),
+    0 0 48px rgba(56, 189, 248, 0.25);
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-stream__band--a,
+  .story-stream__band--b {
+    animation: none;
+  }
+
+  .story-streams {
+    transition: none;
+  }
+
+  .story-flip-kicker--finale,
+  .story-flip-title--finale,
+  .story-flip-line--finale {
+    animation: none !important;
+  }
+
+  .story-flip-line--finale {
+    transform: none;
+    opacity: 1;
+  }
+
+  .story-loader__ring--a,
+  .story-loader__ring--b,
+  .story-loader__ring--c {
+    animation: none !important;
+  }
+}
+
+/* —— Full-page loader (until WebGL targets ready) —— */
+.story-loader__rings {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  margin-bottom: 1.75rem;
+}
+
+.story-loader__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+.story-loader__ring--a {
+  inset: 0;
+  border-top-color: rgba(102, 126, 234, 0.65);
+  border-right-color: rgba(102, 126, 234, 0.12);
+  animation: story-loader-spin 1.85s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
+}
+
+.story-loader__ring--b {
+  inset: 12px;
+  border-bottom-color: rgba(79, 172, 254, 0.55);
+  border-left-color: rgba(79, 172, 254, 0.1);
+  animation: story-loader-spin 2.4s cubic-bezier(0.45, 0.05, 0.25, 1) infinite
+    reverse;
+}
+
+.story-loader__ring--c {
+  inset: 26px;
+  border-top-color: rgba(167, 139, 250, 0.45);
+  animation: story-loader-spin 3.1s linear infinite;
+}
+
+@keyframes story-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.story-loader__title {
+  animation: story-loader-shimmer 2.8s ease-in-out infinite;
+}
+
+@keyframes story-loader-shimmer {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: blur(0);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0.3px);
+  }
+}
+
+/* —— Opening: settle-in after loader (class toggled post–first paint; scroll drives opacity after) —— */
+.story-opening-landing--entrance-on .story-flip-kicker {
+  animation: story-landing-kicker 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.story-opening-landing--entrance-on .story-flip-line {
+  animation: story-landing-line 1.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.story-opening-landing--entrance-on .story-flip-line:nth-of-type(1) {
+  animation-delay: 0.08s;
+}
+
+.story-opening-landing--entrance-on .story-flip-line:nth-of-type(2) {
+  animation-delay: 0.16s;
+}
+
+.story-opening-landing--entrance-on .story-flip-hint {
+  animation: story-landing-hint 1.35s 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes story-landing-kicker {
+  from {
+    opacity: 0;
+    letter-spacing: 0.28em;
+    filter: blur(10px);
+    transform: translateY(22px);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(0);
+    letter-spacing: 0.19em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.18em;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes story-landing-line {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(26px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes story-landing-hint {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.story-finale-title-word {
+  font-size: clamp(1.75rem, 5vw, 2.75rem);
+  letter-spacing: 0.28em;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-opening-landing .story-flip-kicker,
+  .story-opening-landing .story-flip-line,
+  .story-opening-landing .story-flip-hint {
+    animation: none !important;
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}

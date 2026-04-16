@@ -1,0 +1,26 @@
+{
+  "name": "particle-portrait-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "generate:particles": "node scripts/generateParticleTargets.mjs"
+  },
+  "dependencies": {
+    "next": "16.0.10",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "esbuild": "^0.25.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "puppeteer": "^24.0.0",
+    "tailwindcss": "^4"
+  }
+}
