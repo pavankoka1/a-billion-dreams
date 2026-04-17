@@ -69,6 +69,7 @@ body::-webkit-scrollbar {
   z-index: 30;
 }
 
+/* Particles: one layer behind all story copy + rail imagery (.story-stage-main is above). */
 .story-canvas {
   position: fixed;
   inset: 0;
@@ -112,7 +113,8 @@ body::-webkit-scrollbar {
     align-items: center;
   }
 
-  .story-stage-inner--split .story-stage-dots-gutter {
+  .story-stage-inner--split .story-stage-dots-gutter,
+  .story-stage-inner--split .story-beat-rail {
     flex: 1 1 auto;
     min-height: min(42vh, 46dvh);
     width: 100%;
@@ -264,6 +266,32 @@ body::-webkit-scrollbar {
 .story-stage-dots-gutter {
   min-width: 0;
   pointer-events: none;
+}
+
+/* Right column: chapter SVG — no chrome; reveal is clip + motion on the image only */
+.story-beat-rail {
+  position: relative;
+  min-width: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.story-beat-rail__img {
+  display: block;
+  width: min(100%, 22rem);
+  max-height: min(52vh, 420px);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center 28%;
+  transition: opacity 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-beat-rail__img {
+    transition: opacity 0.4s ease;
+  }
 }
 
 .story-lit-word,

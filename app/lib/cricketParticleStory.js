@@ -3,7 +3,8 @@
  * `CHAPTER_TARGET_BEATS` maps chapter index → `public/particle-targets.json` v2 `beats`.
  */
 export const STORY_CONFIG = {
-  firstImageChapter: 2,
+  /** First chapter with portrait-style canvas driving (0 = particles + ambient from the opening). */
+  firstImageChapter: 0,
 };
 
 export const CHAPTER_TARGET_BEATS = [
@@ -20,6 +21,15 @@ export const CHAPTER_TARGET_BEATS = [
 export function getAllStoryBeatIds() {
   return [...new Set(CHAPTER_TARGET_BEATS.filter(Boolean))];
 }
+
+/** Right-rail artwork (`public/story-beats/`) — keyed like `CHAPTER_TARGET_BEATS` beat ids. */
+export const STORY_CHAPTER_VISUAL_SRC = {
+  sachin_struggle: "/story-beats/sachin-young.svg",
+  sachin_drive: "/story-beats/sachin-cover-drive.svg",
+  sachin_pak_standoff: "/story-beats/sachin-pak-standoff.svg",
+  kohli_fire: "/story-beats/kohli-angry.svg",
+  kohli_carry: "/story-beats/kohli-shot-of-century.svg",
+};
 
 /** Crisp center-stage lines; scroll progress maps to chapter index in `CricketParticleStory` via document scroll range. */
 export const storyChapters = [

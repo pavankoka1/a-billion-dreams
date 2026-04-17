@@ -6,12 +6,17 @@ import {
   particleBackgroundRgb,
   particlePortraitConfig,
   particleThemeColorRgb,
+  scatterAmbientParticleColorRgb,
 } from "@/config/particlePortrait.config";
 import ParticlePortrait from "./ParticlePortrait";
+import StoryBeatImageRail from "./StoryBeatImageRail";
 import StoryLoadingOverlay from "./StoryLoadingOverlay";
 import StoryWatcherProgress from "./StoryWatcherProgress";
 import { STORY_CONFIG, storyChapters } from "../lib/cricketParticleStory";
-import { useStoryPortraitScroll } from "../hooks/useStoryPortraitScroll";
+import {
+  PORTRAIT_SCATTER_PREFIX,
+  useStoryPortraitScroll,
+} from "../hooks/useStoryPortraitScroll";
 
 /**
  * Within each chapter’s scroll band, `u` ∈ [0, 1] is split sequentially (must sum to 1):
@@ -415,6 +420,8 @@ export default function CricketParticleStory() {
 
   const {
     portraitMode,
+    portraitBandU,
+    portraitHoldScatter,
     scatterHold,
     targetBeatId,
     scatterPrefillT,
@@ -441,8 +448,26 @@ export default function CricketParticleStory() {
     );
   }, [isFinaleScroll, finalePhase, finaleScrollU]);
 
+  /** Mid-story: flowing particles without silhouettes; finale reserves the portrait morph. */
+  const storyAmbientOnly = portraitMode && !isFinaleScroll;
+
+  /** 0 = calm (scroll prefix), 1 = full ambient motion after the prefix band. */
+  const verseAmbientIntensity = useMemo(() => {
+    if (!storyAmbientOnly) return 0;
+    if (portraitBandU === null) return 1;
+    if (portraitHoldScatter) {
+      return (
+        0.28 +
+        0.72 * clamp(portraitBandU / PORTRAIT_SCATTER_PREFIX, 0, 1)
+      );
+    }
+    return 1;
+  }, [storyAmbientOnly, portraitBandU, portraitHoldScatter]);
+
   const scatterAlphaScale = useMemo(() => {
-    if (storyChapterIndex < firstImage) return 0;
+    if (storyChapterIndex < firstImage) {
+      return particlePortraitConfig.openingScatterAlpha ?? 0;
+    }
     if (portraitMode) return 1;
     return Math.min(
       0.94,
@@ -452,10 +477,13 @@ export default function CricketParticleStory() {
 
   const particleColorRgb = useMemo(() => {
     if (storyChapterIndex === 0) return openingHeaderDotColorRgb;
+    if (portraitMode) return scatterAmbientParticleColorRgb;
     return particleThemeColorRgb;
-  }, [storyChapterIndex]);
+  }, [storyChapterIndex, portraitMode]);
 
-  const showDotsRightGutter = portraitMode && !isFinaleScroll;
+  /** Split stage only from chapter index 2 onward (rail beats); opening + “wait” stay centered. */
+  const showDotsRightGutter =
+    portraitMode && !isFinaleScroll && storyChapterIndex >= 2;
 
   const copyOpacity = useMemo(() => {
     return chapterCopyOpacity(
@@ -504,6 +532,10 @@ export default function CricketParticleStory() {
           storyToImageDurationMs={
             finaleImageForming ? particlePortraitConfig.storyFinaleToImageMs : undefined
           }
+          finaleFormMorph={finaleImageForming}
+          storyAmbientOnly={storyAmbientOnly}
+          verseAmbientIntensity={verseAmbientIntensity}
+          storyScrollProgress={scrollProgress}
           onReadyStateChange={handleParticleStatus}
         />
       </div>
@@ -550,7 +582,12 @@ export default function CricketParticleStory() {
               </div>
 
               {showDotsRightGutter ? (
-                <div className="story-stage-dots-gutter" aria-hidden />
+                <StoryBeatImageRail
+                  storyChapterIndex={storyChapterIndex}
+                  portraitBandU={portraitBandU}
+                  copyOpacity={copyOpacity}
+                  reducedMotion={prefersReducedMotion}
+                />
               ) : null}
             </div>
           ) : (

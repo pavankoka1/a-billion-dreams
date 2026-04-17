@@ -1,6 +1,5 @@
 /**
- * WebGL2 point-sprite renderer for particle positions in CSS pixel space (origin top-left).
- * SVG is unrelated to WebGL — it only feeds target positions on the CPU; drawing is all GPU.
+ * WebGL2 point-sprite renderer: position + optional per-particle size/alpha (scatter “mist vs vein”).
  */
 
 function compileShader(gl, type, source) {
@@ -28,18 +27,25 @@ function createProgram(gl, vsSrc, fsSrc) {
   return prog;
 }
 
+const FLOATS_PER_VERTEX = 4;
+
 const VS = `#version 300 es
 in vec2 a_position;
+in vec2 a_style;
 uniform vec2 u_resolution;
 uniform float u_dpr;
 uniform float u_pointDiameterPx;
+uniform float u_useParticleStyle;
+out float v_alphaScale;
 
 void main() {
   float x = (a_position.x / u_resolution.x) * 2.0 - 1.0;
   float y = 1.0 - (a_position.y / u_resolution.y) * 2.0;
   gl_Position = vec4(x, y, 0.0, 1.0);
-  float sz = max(1.0, u_pointDiameterPx * u_dpr);
-  gl_PointSize = min(256.0, sz);
+  float base = max(1.0, u_pointDiameterPx * u_dpr);
+  float sm = u_useParticleStyle > 0.5 ? max(0.18, a_style.x) : 1.0;
+  v_alphaScale = u_useParticleStyle > 0.5 ? clamp(a_style.y, 0.12, 2.2) : 1.0;
+  gl_PointSize = min(256.0, base * sm);
 }
 `;
 
@@ -47,13 +53,15 @@ const FS = `#version 300 es
 precision highp float;
 uniform float u_alpha;
 uniform vec3 u_color;
+in float v_alphaScale;
 out vec4 fragColor;
 
 void main() {
   vec2 c = gl_PointCoord - vec2(0.5);
   float d = length(c);
   if (d > 0.5) discard;
-  float a = u_alpha * (1.0 - smoothstep(0.38, 0.5, d));
+  /** Softer edge = more overlap glow (reads closer to dense stipple / smoke). */
+  float a = u_alpha * v_alphaScale * (1.0 - smoothstep(0.28, 0.5, d));
   if (a < 0.002) discard;
   fragColor = vec4(u_color, a);
 }
@@ -65,9 +73,11 @@ void main() {
 export function createParticleWebGLRenderer(gl) {
   const program = createProgram(gl, VS, FS);
   const aPosition = gl.getAttribLocation(program, "a_position");
+  const aStyle = gl.getAttribLocation(program, "a_style");
   const uResolution = gl.getUniformLocation(program, "u_resolution");
   const uDpr = gl.getUniformLocation(program, "u_dpr");
   const uPointDiameterPx = gl.getUniformLocation(program, "u_pointDiameterPx");
+  const uUseParticleStyle = gl.getUniformLocation(program, "u_useParticleStyle");
   const uAlpha = gl.getUniformLocation(program, "u_alpha");
   const uColor = gl.getUniformLocation(program, "u_color");
 
@@ -79,23 +89,43 @@ export function createParticleWebGLRenderer(gl) {
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   return {
+    FLOATS_PER_VERTEX,
     /**
-     * @param {Float32Array} positions — pairs [x0,y0, x1,y1, …] in CSS px
-     * @param {[number, number, number]} colorRgb — straight-alpha RGB (0–1) multiplied with per-pixel alpha
+     * Interleaved: x, y, sizeMul, alphaMul per particle (size of `buffer` = count * 4 floats).
      */
-    draw(positions, count, resolutionCss, dpr, pointDiameterCssPx, alpha, colorRgb = [1, 1, 1]) {
+    draw(
+      interleavedXYStyle,
+      count,
+      resolutionCss,
+      dpr,
+      pointDiameterCssPx,
+      alpha,
+      colorRgb = [1, 1, 1],
+      opts
+    ) {
+      const blend = opts?.blend ?? "normal";
+      const useParticleStyle = opts?.useParticleStyle !== false;
+      if (blend === "additive") {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      } else {
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      }
+
       gl.useProgram(program);
       gl.uniform2f(uResolution, resolutionCss[0], resolutionCss[1]);
       gl.uniform1f(uDpr, dpr);
       gl.uniform1f(uPointDiameterPx, pointDiameterCssPx);
+      gl.uniform1f(uUseParticleStyle, useParticleStyle ? 1 : 0);
       gl.uniform1f(uAlpha, alpha);
       gl.uniform3f(uColor, colorRgb[0], colorRgb[1], colorRgb[2]);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      const slice = positions.subarray(0, count * 2);
+      const slice = interleavedXYStyle.subarray(0, count * FLOATS_PER_VERTEX);
       gl.bufferData(gl.ARRAY_BUFFER, slice, gl.DYNAMIC_DRAW);
       gl.enableVertexAttribArray(aPosition);
-      gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(aStyle);
+      gl.vertexAttribPointer(aStyle, 2, gl.FLOAT, false, 16, 8);
 
       gl.drawArrays(gl.POINTS, 0, count);
     },
@@ -108,7 +138,6 @@ export function createParticleWebGLRenderer(gl) {
 
 /**
  * @param {HTMLCanvasElement} canvas
- * @returns {{ gl: WebGL2RenderingContext, renderer: ReturnType<typeof createParticleWebGLRenderer> } | null}
  */
 export function initWebGLParticles(canvas) {
   const gl = canvas.getContext("webgl2", {

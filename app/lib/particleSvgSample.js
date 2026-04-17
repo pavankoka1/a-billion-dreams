@@ -113,9 +113,19 @@ export function samplePointsFromSvgRoot(svgEl, count) {
  * Map normalized outline coords to CSS pixels (letterboxed).
  * @param {number} svgW - source artwork width (defaults to shared portrait size)
  * @param {number} svgH - source artwork height
+ * @param {number} layoutZoom — >1 zooms artwork in the viewport (slight crop, “closer” illusion)
  */
-export function layoutTarget(nx, ny, innerW, innerH, svgW = SVG_W, svgH = SVG_H) {
-  const scale = Math.min(innerW / svgW, innerH / svgH);
+export function layoutTarget(
+  nx,
+  ny,
+  innerW,
+  innerH,
+  svgW = SVG_W,
+  svgH = SVG_H,
+  layoutZoom = 1
+) {
+  const base = Math.min(innerW / svgW, innerH / svgH);
+  const scale = base * layoutZoom;
   const drawW = svgW * scale;
   const drawH = svgH * scale;
   const ox = (innerW - drawW) / 2;

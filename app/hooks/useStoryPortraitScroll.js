@@ -62,32 +62,25 @@ export function useStoryPortraitScroll({
   const scatterHold =
     finaleTextScatterOnly || finaleImageScatterBurst || portraitHoldScatter;
 
+  /**
+   * Silhouette beats only for the finale image — mid-story uses ambient flow (no morph targets).
+   */
   const targetBeatId = useMemo(() => {
     if (!portraitMode) return null;
     if (isFinaleScroll) {
       if (finalePhase !== "image") return null;
       return CHAPTER_TARGET_BEATS[lastChapterIndex] ?? "duo_finale";
     }
-    return CHAPTER_TARGET_BEATS[storyChapterIndex] ?? "duo_finale";
-  }, [portraitMode, isFinaleScroll, finalePhase, storyChapterIndex, lastChapterIndex]);
+    return null;
+  }, [portraitMode, isFinaleScroll, finalePhase, lastChapterIndex]);
 
   const scatterPrefillT = useMemo(() => {
     if (!portraitHoldScatter || portraitBandU === null) return 0;
     return clamp(portraitBandU / PORTRAIT_SCATTER_PREFIX, 0, 1);
   }, [portraitHoldScatter, portraitBandU]);
 
-  const particleLayout = useMemo(() => {
-    if (!portraitMode) return "full";
-    if (
-      storyChapterIndex >= lastChapterIndex &&
-      isFinaleScroll &&
-      finalePhase === "image"
-    ) {
-      return "full";
-    }
-    if (storyChapterIndex >= lastChapterIndex) return "splitGutters";
-    return "splitRight";
-  }, [portraitMode, storyChapterIndex, lastChapterIndex, isFinaleScroll, finalePhase]);
+  /** Single full-viewport field (Sachin/Kohli story — no split-rail particle layouts). */
+  const particleLayout = useMemo(() => "full", []);
 
   /** Bumps when scroll crosses the portrait hold boundary — optional prop for particle sync. */
   const portraitBandEpoch = useMemo(() => {
