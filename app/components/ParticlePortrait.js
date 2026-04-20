@@ -38,7 +38,7 @@ function easeOutQuint(t) {
   return 1 - (1 - t) ** 5;
 }
 
-/** Smooth S-curve — used for staggered chapter cascade (distinct from finale’s uniform pull). */
+/** Smooth S-curve — staggered chapter cascade and per-particle u along the chord in duo finale. */
 function easeInOutQuint(t) {
   return t < 0.5 ? 16 * t ** 5 : 1 - (-2 * t + 2) ** 5 / 2;
 }
@@ -46,6 +46,26 @@ function easeInOutQuint(t) {
 /** Softer than cubic — slow start, smooth end. */
 function easeInOutQuart(t) {
   return t < 0.5 ? 8 * t * t * t * t : 1 - (-2 * t + 2) ** 4 / 2;
+}
+
+/**
+ * Duo finale master clock: soft anticipation, long convergence, crisp final crystallization.
+ */
+function easeFinalePortrait(t) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  const breathe = 0.17;
+  const settle = 0.11;
+  if (t < breathe) {
+    const u = t / breathe;
+    return u * u * 0.055;
+  }
+  if (t > 1 - settle) {
+    const u = (t - (1 - settle)) / settle;
+    return 0.93 + easeOutQuint(u) * 0.07;
+  }
+  const u = (t - breathe) / (1 - breathe - settle);
+  return 0.055 + easeInOutQuint(u) * 0.875;
 }
 
 function easeToImageByMode(easeMode, rawT) {
@@ -58,6 +78,8 @@ function easeToImageByMode(easeMode, rawT) {
       return easeInOutQuart(rawT);
     case "easeOutQuint":
       return easeOutQuint(rawT);
+    case "easeFinalePortrait":
+      return easeFinalePortrait(rawT);
     case "easeOutCubic":
     default:
       return easeOutCubic(rawT);
@@ -78,6 +100,7 @@ function sampleStoryScatter(innerW, innerH, particleIndex, clusterSpreadFrac = 0
 /**
  * Scroll-aware “orchestration”: wings move vertically in counterphase; nucleus breathes slightly.
  * Positions are **structural anchor + offset**.
+ * `wingPhaseBase` is document scroll Y, or a time-derived value when `scatterAutonomousTimeOnly` is on.
  */
 function orchestratedScatterMotionStep(
   p,
@@ -85,7 +108,7 @@ function orchestratedScatterMotionStep(
   innerH,
   timeMs,
   scrollPaceMul,
-  scrollY,
+  wingPhaseBase,
   cfg
 ) {
   const WH = Math.min(innerW, innerH);
@@ -94,7 +117,7 @@ function orchestratedScatterMotionStep(
     Math.min(cfg.scatterScrollPaceMaxMul ?? 1.5, scrollPaceMul ?? 1)
   );
   const t = timeMs * 0.001 * pace;
-  const phase = scrollY * (cfg.scatterScrollPhaseScale ?? 0.0032);
+  const phase = wingPhaseBase * (cfg.scatterScrollPhaseScale ?? 0.0032);
 
   const wingAmp = WH * (cfg.scatterWingVertAmp ?? 0.048);
   const wingFreq = cfg.scatterWingFreq ?? 0.6;
@@ -187,6 +210,12 @@ export default function ParticlePortrait({
    * Mid-story (before finale scroll): no silhouette morph — flowing “living canvas” motion only.
    */
   storyAmbientOnly = false,
+  /**
+   * Finale flat scatter: replace the ribbon/ring structure with uniform-random dots spread across
+   * the whole viewport. When this flips on, particles re-seed (via a smooth `toScatter` tween) so
+   * the next image morph pulls them directly from that uniform field into the duo portrait.
+   */
+  finaleFlatScatter = false,
   /** 0–1 strength for ambient drift (ramps through scroll prefix, then full). */
   verseAmbientIntensity = 1,
   /** 0–1 document scroll — drives graceful field drift (section-independent). */
@@ -248,6 +277,7 @@ export default function ParticlePortrait({
   visualRef.current.storyToImageDurationMs = storyToImageDurationMs ?? null;
   visualRef.current.finaleFormMorph = finaleFormMorph;
   visualRef.current.storyAmbientOnly = storyAmbientOnly;
+  visualRef.current.finaleFlatScatter = finaleFlatScatter;
   visualRef.current.verseAmbientIntensity = verseAmbientIntensity;
   visualRef.current.storyScrollProgress = storyScrollProgress;
 
@@ -286,34 +316,46 @@ export default function ParticlePortrait({
     if (n === 0) return;
 
     const syFrame = visualRef.current.scrollY ?? 0;
-    const prevSy = visualRef.current._lastScrollY ?? syFrame;
-    const dScrollFrame = syFrame - prevSy;
-    visualRef.current._lastScrollY = syFrame;
-
     const cfgScroll = particlePortraitConfig;
-    const cap = cfgScroll.scatterScrollInputCapPx ?? 44;
-    const inst = Math.min(Math.abs(dScrollFrame), cap);
-    const rf = cfgScroll.scatterScrollFastRetain ?? 0.88;
-    const rs = cfgScroll.scatterScrollSlowRetain ?? 0.974;
-    const vf =
-      (visualRef.current._scrollVelFast ?? 0) * rf + inst * (1 - rf);
-    const vs =
-      (visualRef.current._scrollVelSlow ?? 0) * rs + vf * (1 - rs);
-    visualRef.current._scrollVelFast = vf;
-    visualRef.current._scrollVelSlow = vs;
+    const autonomousScatter = cfgScroll.scatterAutonomousTimeOnly === true;
 
-    const refPx = cfgScroll.scatterScrollPaceRefPx ?? 36;
-    const minM = cfgScroll.scatterScrollPaceMinMul ?? 1;
-    const maxM = cfgScroll.scatterScrollPaceMaxMul ?? 1.5;
-    const intensity = Math.min(1, vs / Math.max(1e-6, refPx));
-    const targetMul = minM + (maxM - minM) * intensity;
-    const curMul = visualRef.current._scrollPaceMul ?? 1;
-    const alphaUp = cfgScroll.scatterScrollPaceLerpUp ?? 0.15;
-    const alphaDn = cfgScroll.scatterScrollPaceLerpDown ?? 0.06;
-    const a = targetMul > curMul ? alphaUp : alphaDn;
-    visualRef.current._scrollPaceMul = curMul + (targetMul - curMul) * a;
+    let scrollPaceMul = 1;
+    if (!autonomousScatter) {
+      const prevSy = visualRef.current._lastScrollY ?? syFrame;
+      const dScrollFrame = syFrame - prevSy;
+      visualRef.current._lastScrollY = syFrame;
 
-    const scrollPaceMul = visualRef.current._scrollPaceMul;
+      const cap = cfgScroll.scatterScrollInputCapPx ?? 44;
+      const inst = Math.min(Math.abs(dScrollFrame), cap);
+      const rf = cfgScroll.scatterScrollFastRetain ?? 0.88;
+      const rs = cfgScroll.scatterScrollSlowRetain ?? 0.974;
+      const vf =
+        (visualRef.current._scrollVelFast ?? 0) * rf + inst * (1 - rf);
+      const vs =
+        (visualRef.current._scrollVelSlow ?? 0) * rs + vf * (1 - rs);
+      visualRef.current._scrollVelFast = vf;
+      visualRef.current._scrollVelSlow = vs;
+
+      const refPx = cfgScroll.scatterScrollPaceRefPx ?? 36;
+      const minM = cfgScroll.scatterScrollPaceMinMul ?? 1;
+      const maxM = cfgScroll.scatterScrollPaceMaxMul ?? 1.5;
+      const intensity = Math.min(1, vs / Math.max(1e-6, refPx));
+      const targetMul = minM + (maxM - minM) * intensity;
+      const curMul = visualRef.current._scrollPaceMul ?? 1;
+      const alphaUp = cfgScroll.scatterScrollPaceLerpUp ?? 0.15;
+      const alphaDn = cfgScroll.scatterScrollPaceLerpDown ?? 0.06;
+      const a = targetMul > curMul ? alphaUp : alphaDn;
+      visualRef.current._scrollPaceMul = curMul + (targetMul - curMul) * a;
+
+      scrollPaceMul = visualRef.current._scrollPaceMul;
+    } else {
+      visualRef.current._lastScrollY = syFrame;
+      visualRef.current._scrollPaceMul = 1;
+    }
+
+    const wingPhaseBase = autonomousScatter
+      ? timeMs * (cfgScroll.scatterAutonomousPhaseEmuPerMs ?? 0.028)
+      : syFrame;
 
     ({ phase, animStart, duration } = s);
 
@@ -340,6 +382,7 @@ export default function ParticlePortrait({
       !visualRef.current.storyAmbientOnly;
     const staggerSpread =
       particlePortraitConfig.chapterMorphStaggerSpread ?? 0.42;
+    const cfgMorph = particlePortraitConfig;
 
     const {
       scatterAlphaScale: sas,
@@ -390,6 +433,86 @@ export default function ParticlePortrait({
           const by = p.sy + dy * morphT;
           x = bx + px * breathe;
           y = by + py * breathe;
+        } else if (finaleUniform) {
+          /**
+           * Elegant finale morph: every particle takes an individual journey from its current
+           * flat-scatter position to its target with:
+           *   1. A random (not radial) delay so no silhouette-wipe structure is ever visible.
+           *   2. A perpendicular Bézier-style arc that peaks at mid-flight and dies at landing,
+           *      producing graceful crossing paths that feel "gathered" rather than mechanical.
+           *   3. A smooth S-curve ease (`storyToImageEase` — defaults to `easeInOutQuint`) so
+           *      dots glide into place instead of snapping.
+           */
+          if (cfgMorph.finaleMorphDirect === true) {
+            const h1 =
+              (Math.sin(p.seed * 12.9898 + p.nx * 47.23 + p.ny * 23.77) + 1) * 0.5;
+            const spread = cfgMorph.finaleMorphStaggerSpread ?? 0.32;
+            const delay = h1 * spread;
+            let u = 0;
+            if (rawT > delay) {
+              u = (rawT - delay) / (1 - delay);
+            }
+            morphT = easeToImageByMode(easeMode, u);
+            const len = Math.hypot(dx, dy) || 1;
+            const px = -dy / len;
+            const py = dx / len;
+            const WH = Math.min(innerW, innerH);
+            const arcK = cfgMorph.finaleMorphArcScale ?? 0.055;
+            const h2 =
+              (Math.sin(p.seed * 78.233 + p.nx * 13.7 + p.ny * 41.9) + 1) * 0.5;
+            const dir = h2 < 0.5 ? -1 : 1;
+            const arc =
+              WH *
+              arcK *
+              dir *
+              Math.sin(u * Math.PI) *
+              (1 - u * u * 0.35);
+            x = p.sx + dx * morphT + px * arc;
+            y = p.sy + dy * morphT + py * arc;
+          } else {
+            const tw = easeFinalePortrait(rawT);
+            const spread = cfgMorph.finaleMorphStaggerSpread ?? 0.46;
+            const radialW = cfgMorph.finaleMorphRadialWeight ?? 0.72;
+            const cx = innerW * 0.5;
+            const cy = innerH * 0.5;
+            const maxR = (cfgMorph.finaleMorphRadialMaxFrac ?? 0.52) * Math.min(innerW, innerH);
+            const distEnd = Math.hypot(end.x - cx, end.y - cy);
+            const radial = Math.min(1, distEnd / Math.max(1e-3, maxR));
+            const h =
+              (Math.sin(p.seed * 12.9898 + p.nx * 47.23) + 1) * 0.5;
+            const delay = (radialW * radial + (1 - radialW) * h) * spread;
+            let u = 0;
+            if (tw > delay) {
+              u = (tw - delay) / (1 - delay);
+            }
+            morphT = easeInOutQuint(u);
+            const len = Math.hypot(dx, dy) || 1;
+            const px = -dy / len;
+            const py = dx / len;
+            const WH = Math.min(innerW, innerH);
+            const breatheK = cfgMorph.finaleMorphBreatheScale ?? 1.38;
+            const breathe =
+              WH *
+              0.00185 *
+              breatheK *
+              Math.sin(p.seed * 2.31 + u * 6.2) *
+              (1 - u) *
+              u *
+              4;
+            const swirlK = cfgMorph.finaleMorphSwirlNorm ?? 0.0025;
+            const swirl =
+              WH *
+              swirlK *
+              Math.sin(p.seed * 1.73 + u * Math.PI * 2.65) *
+              (1 - u) *
+              (1 - u) *
+              u *
+              6.5;
+            const bx = p.sx + dx * morphT;
+            const by = p.sy + dy * morphT;
+            x = bx + px * (breathe + swirl);
+            y = by + py * (breathe + swirl);
+          }
         } else {
           x = p.sx + dx * morphT;
           y = p.sy + dy * morphT;
@@ -406,9 +529,12 @@ export default function ParticlePortrait({
         p.x = x;
         p.y = y;
       } else if (phase === "scatter") {
+        /** Finale flat scatter overrides the ribbon preset — uniform field, orchestrated breathe only. */
+        const flatScatter = visualRef.current.finaleFlatScatter === true;
         const flowRibbon =
-          particlePortraitConfig.scatterLayoutPreset === "flowRibbon" ||
-          particlePortraitConfig.scatterMotionPreset === "flowRibbon";
+          !flatScatter &&
+          (particlePortraitConfig.scatterLayoutPreset === "flowRibbon" ||
+            particlePortraitConfig.scatterMotionPreset === "flowRibbon");
         if (flowRibbon) {
           flowRibbonMotionStep(
             p,
@@ -425,7 +551,7 @@ export default function ParticlePortrait({
             innerH,
             timeMs,
             scrollPaceMul,
-            syFrame,
+            wingPhaseBase,
             particlePortraitConfig
           );
         }
@@ -613,6 +739,115 @@ export default function ParticlePortrait({
     s.phase = "toScatter";
     s.animStart = now;
   }, []);
+
+  /**
+   * Re-seed all particles to uniform-random positions (no ring, no arms). Particles tween from
+   * their current positions to these new uniform homes via `toScatter`, so the handoff reads as a
+   * dissolve — not a teleport. Subsequent `toImage` starts from this flat field.
+   */
+  const beginFlatScatterTransition = useCallback(() => {
+    const s = stateRef.current;
+    const canvas = canvasRef.current;
+    const innerW = canvas?.clientWidth || window.innerWidth;
+    const innerH = canvas?.clientHeight || window.innerHeight;
+    const { particles } = s;
+    if (particles.length === 0) return;
+    const now = performance.now();
+    const dpr = dprRef.current;
+    const scatterD = particlePortraitConfig.scatterDotRadius * 2;
+    const pad = scatterCanvasEdgePad(scatterD, dpr);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.sx = p.x;
+      p.sy = p.y;
+      const rx = pad + Math.random() * Math.max(1, innerW - pad * 2);
+      const ry = pad + Math.random() * Math.max(1, innerH - pad * 2);
+      p.rx = rx;
+      p.ry = ry;
+      p.structX = rx;
+      p.structY = ry;
+      p.scatterZone = undefined;
+      p.flowRegion = undefined;
+      p.flowU = 0;
+      p.flowV = 0;
+    }
+    s.phase = "toScatter";
+    s.animStart = now;
+    s.duration = particlePortraitConfig.finaleFlatScatterInMs ?? 900;
+  }, []);
+
+  /**
+   * Re-seed back to the original flowRibbon structure (ring + arms) from whatever positions the
+   * particles are currently in — used when the user scrolls **out** of the finale so every other
+   * section's background animation stays as it was originally authored.
+   */
+  const beginRibbonScatterTransition = useCallback(() => {
+    const s = stateRef.current;
+    const canvas = canvasRef.current;
+    const innerW = canvas?.clientWidth || window.innerWidth;
+    const innerH = canvas?.clientHeight || window.innerHeight;
+    const { particles } = s;
+    if (particles.length === 0) return;
+    const now = performance.now();
+    const dpr = dprRef.current;
+    const scatterD = particlePortraitConfig.scatterDotRadius * 2;
+    const pad = scatterCanvasEdgePad(scatterD, dpr);
+    const seedK = particlePortraitConfig.cohesiveClusterSpread ?? 0.01;
+    const flowRibbon =
+      particlePortraitConfig.scatterLayoutPreset === "flowRibbon" ||
+      particlePortraitConfig.scatterMotionPreset === "flowRibbon";
+    if (!flowRibbon) return;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.sx = p.x;
+      p.sy = p.y;
+      const sc = seedFlowRibbonParticle(
+        innerW,
+        innerH,
+        i,
+        seedK,
+        particlePortraitConfig
+      );
+      const cl = clampScatterXY(sc.rx, sc.ry, innerW, innerH, pad);
+      p.rx = cl.x;
+      p.ry = cl.y;
+      p.structX = cl.x;
+      p.structY = cl.y;
+      p.flowRegion = sc.flowRegion;
+      p.flowU = sc.flowU;
+      p.flowV = sc.flowV;
+      p.scatterSize = sc.sizeMul ?? 1;
+      p.scatterAlpha =
+        (sc.alphaMul ?? 1) *
+        (particlePortraitConfig.scatterPerParticleAlpha ?? 1);
+      p.scatterZone = sc.scatterZone;
+    }
+    s.phase = "toScatter";
+    s.animStart = now;
+    s.duration = particlePortraitConfig.finaleFlatScatterInMs ?? 900;
+  }, []);
+
+  /**
+   * Drive the flat-scatter / ribbon re-seed based on the flag:
+   *  • flag on  → finale uniform field
+   *  • flag off → original flowRibbon structure (restores mid-story background unchanged)
+   */
+  const flatScatterArmedRef = useRef(false);
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (finaleFlatScatter) {
+      beginFlatScatterTransition();
+      flatScatterArmedRef.current = true;
+    } else if (flatScatterArmedRef.current) {
+      beginRibbonScatterTransition();
+      flatScatterArmedRef.current = false;
+    }
+  }, [
+    finaleFlatScatter,
+    status,
+    beginFlatScatterTransition,
+    beginRibbonScatterTransition,
+  ]);
 
   useEffect(() => {
     if (!storyMode || status !== "ready") return;

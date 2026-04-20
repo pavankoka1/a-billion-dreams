@@ -24,11 +24,11 @@ export function getAllStoryBeatIds() {
 
 /** Right-rail artwork (`public/story-beats/`) — keyed like `CHAPTER_TARGET_BEATS` beat ids. */
 export const STORY_CHAPTER_VISUAL_SRC = {
-  sachin_struggle: "/story-beats/sachin-young.svg",
-  sachin_drive: "/story-beats/sachin-cover-drive.svg",
-  sachin_pak_standoff: "/story-beats/sachin-pak-standoff.svg",
-  kohli_fire: "/story-beats/kohli-angry.svg",
-  kohli_carry: "/story-beats/kohli-shot-of-century.svg",
+  sachin_struggle: "/story-beats/sachin-young.png",
+  sachin_drive: "/story-beats/sachin-cover-drive.png",
+  sachin_pak_standoff: "/story-beats/sachin-pak-standoff.png",
+  kohli_fire: "/story-beats/kohli-angry.png",
+  kohli_carry: "/story-beats/kohli-shot-of-century.png",
 };
 
 /** Crisp center-stage lines; scroll progress maps to chapter index in `CricketParticleStory` via document scroll range. */
@@ -38,8 +38,9 @@ export const storyChapters = [
     kicker: "A Billion Dreams",
     title: "",
     lines: [
-      "Sachin’s era, then Virat’s — same country, same hunger, told as one living portrait.",
-      "Scroll: the words follow you, line by line.",
+      "A nation dreams in the dark between bat and ball.",
+      "Light drifts, then gathers—shapes of courage taking form.",
+      "Scroll. Let memory remember itself.",
     ],
     hint: "Scroll",
   },
@@ -48,8 +49,9 @@ export const storyChapters = [
     kicker: "Before the roar",
     title: "Time",
     lines: [
-      "Crowds forget; the crease remembers.",
-      "Great innings are built in the long quiet before the first boundary.",
+      "The crowd always forgets.",
+      "The crease never does.",
+      "Greatness waits in the long quiet, where pressure turns into pulse.",
     ],
   },
   {
@@ -57,8 +59,9 @@ export const storyChapters = [
     kicker: "Where it began",
     title: "Boy and blade",
     lines: [
-      "A small kid against a loud world — nose bloodied, nerve intact.",
-      "He stepped in anyway. The dots became a silhouette that never broke.",
+      "A small boy walks into a loud world, nose bleeding, eyes steady.",
+      "He lifts the bat like a promise no one else can keep.",
+      "From scattered light, a silhouette refuses to break.",
     ],
   },
   {
@@ -66,8 +69,9 @@ export const storyChapters = [
     kicker: "The signature",
     title: "Cover drive",
     lines: [
-      "Not flair for flair — geometry when everything else is noise.",
-      "Still feet, straight intent: the shot India learned to trust.",
+      "Not flash. Geometry.",
+      "Still feet, straight heart—the one shot a billion people learned to trust.",
+      "In the noise, he drew a line that stayed perfect.",
     ],
   },
   {
@@ -75,9 +79,9 @@ export const storyChapters = [
     kicker: "Alone in the arc",
     title: "Eleven against one",
     lines: [
-      "Green shirts at his shoulder, noise stacked like a wall — pressure dressed as crowd.",
-      "Evils and odds leaned in from every angle; he was still the one who had to answer.",
-      "No chorus behind him in that glare — just a blade, a crease, and the refusal to fold.",
+      "Green shirts at his shoulder. Noise stacked like walls.",
+      "No chorus, no cover—just the blade, the crease, and the refusal to fold.",
+      "He answered for everyone who could not breathe.",
     ],
   },
   {
@@ -85,17 +89,19 @@ export const storyChapters = [
     kicker: "The next fire",
     title: "Storm named",
     lines: [
-      "Different temper, same refusal to fold.",
-      "Short ball at the throat — answered with silence and runs, not theatre.",
+      "A new storm arrives wearing different skin, same iron will.",
+      "Short ball at the throat—met with silence, then thunder.",
+      "The fire did not die. It simply changed hands.",
     ],
   },
   {
     id: "branch",
     kicker: "Carry",
-    title: "One swing",
+    title: "Shot of the Century!",
     lines: [
-      "Titles come and go; the scorecard fades.",
-      "What lasts is who picks up the thread when the stadium goes quiet.",
+      "Trophies turn to dust. Scorecards fade.",
+      "What remains is the hand that reaches back and the swing that carries forward.",
+      "Legacy is not passed. It is lived, breath by breath, in the same crease.",
     ],
   },
   {
@@ -103,9 +109,10 @@ export const storyChapters = [
     kicker: "Finale",
     title: "",
     lines: [
-      "TWO LIFETIMES · ONE PORTRAIT",
-      "WAIT · LINE · ROAR · CARRY",
-      "NOT REPLACEMENT — CONTINUITY",
+      "TWO LIFETIMES",
+      "ONE PORTRAIT",
+      "WAIT · STRIKE · ROAR · CARRY",
+      "NOT REPLACEMENT — ONLY LIGHT CONTINUING",
     ],
     hint: "",
     finale: true,

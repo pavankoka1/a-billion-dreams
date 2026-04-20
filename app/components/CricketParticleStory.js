@@ -32,13 +32,25 @@ const SCROLL_FADE_OUT = 0.3;
 const OPENING_LANDING_K = 0.035;
 
 /**
- * Finale scroll (u = k − (n−1), k ≥ n−1): title → body lines → fade all copy → duo image only.
+ * Finale scroll (u = k − (n−1), k ≥ n−1): copy reads like any other chapter — fade-in, word-by-word
+ * color, hold, then fade-out as the duo portrait forms.
  */
-const FINALE_U_TITLE_END = 0.14;
-const FINALE_U_BODY_END = 0.48;
-const FINALE_U_FADE_END = 0.64;
-/** After text fades: full-viewport scatter, then scroll into duo formation (see useStoryPortraitScroll). */
-const FINALE_U_IMAGE_SCATTER_END = 0.78;
+/** Text opacity 0→1 from u=0 → `FADEIN_END` (matches regular chapters' fade-in feel). */
+const FINALE_U_FADEIN_END = 0.1;
+/** Word color head 0→w over `[FADEIN_END, WORDS_END]` — all finale words lit well before the morph. */
+const FINALE_U_WORDS_END = 0.55;
+/** Text begins fading out here so the scatter has the stage long before the morph. */
+const FINALE_U_HOLD_END = 0.7;
+/** Copy fully faded — from here until the morph trigger, only the full-page scatter is on screen. */
+const FINALE_U_TEXT_OUT_END = 0.82;
+/**
+ * Morph trigger — particles form the duo portrait only at the bottom of the finale section.
+ * Before this, dots scatter across the whole viewport; after it, the time-based morph pulls
+ * them directly into place (no intermediate transition).
+ */
+const FINALE_U_IMAGE_SCATTER_END = 0.92;
+/** Finale chapter starts rendering (fade-in pre-roll) at `k = n - 1 - PRE_ROLL` so there's no blank gap. */
+const FINALE_PRE_ROLL_K = 0.5;
 
 /** Extra document height so the finale image phase has room (nothing after the portrait). */
 const STORY_SPACER_EXTRA_VH = 140;
@@ -84,17 +96,24 @@ function chapterCopyOpacity(k, chapterIndex, n, reduced, isFinaleScroll) {
     if (u <= openFadeStart) return 1;
     return clamp(1 - (u - openFadeStart) / SCROLL_FADE_OUT, 0, 1);
   }
-  if (j === n - 1 && isFinaleScroll) {
-    const uF = clamp(k - (n - 1), 0, 1);
-    if (uF < FINALE_U_BODY_END) return 1;
-    if (uF < FINALE_U_FADE_END) {
-      return clamp(
-        1 - (uF - FINALE_U_BODY_END) / (FINALE_U_FADE_END - FINALE_U_BODY_END),
-        0,
-        1
-      );
+  if (j === n - 1) {
+    if (isFinaleScroll) {
+      const uF = clamp(k - (n - 1), 0, 1);
+      /** Pre-roll (k < n−1) already took copy to 1 — hold through words + scatter. */
+      if (uF < FINALE_U_HOLD_END) return 1;
+      if (uF < FINALE_U_TEXT_OUT_END) {
+        return clamp(
+          1 - (uF - FINALE_U_HOLD_END) / (FINALE_U_TEXT_OUT_END - FINALE_U_HOLD_END),
+          0,
+          1
+        );
+      }
+      return 0;
     }
-    return 0;
+    /** Pre-roll: fade copy in across the quarter-chapter before finale scroll begins (no blank gap). */
+    const preLo = n - 1 - FINALE_PRE_ROLL_K;
+    if (k < preLo) return 0;
+    return clamp((k - preLo) / FINALE_PRE_ROLL_K, 0, 1);
   }
   const lo = j - 0.5;
   const hi = j + 0.5;
@@ -336,7 +355,11 @@ export default function CricketParticleStory() {
   const isFinaleScroll = slice.k >= n - 1;
 
   const storyChapterIndex = useMemo(() => {
-    if (visibleChapter === lastChapterIndex && slice.k < n - 1) {
+    /** Let the finale chapter start rendering during its pre-roll band so there's no blank gap after kohli_carry. */
+    if (
+      visibleChapter === lastChapterIndex &&
+      slice.k < n - 1 - FINALE_PRE_ROLL_K
+    ) {
       return lastChapterIndex - 1;
     }
     return visibleChapter;
@@ -348,15 +371,13 @@ export default function CricketParticleStory() {
     () => countFinaleBodyWords(finaleChapter),
     [finaleChapter]
   );
-  const finaleTitleWordCount = 1;
-  const finaleTotalWords = finaleTitleWordCount + finaleBodyWordCount;
 
   const finalePhase = useMemo(() => {
     if (!isFinaleScroll) return null;
     const uF = clamp(slice.k - (n - 1), 0, 1);
-    if (uF < FINALE_U_TITLE_END) return "title";
-    if (uF < FINALE_U_BODY_END) return "body";
-    if (uF < FINALE_U_FADE_END) return "fade";
+    if (uF < FINALE_U_FADEIN_END) return "enter";
+    if (uF < FINALE_U_WORDS_END) return "words";
+    if (uF < FINALE_U_IMAGE_SCATTER_END) return "hold";
     return "image";
   }, [isFinaleScroll, slice.k, n]);
 
@@ -367,21 +388,16 @@ export default function CricketParticleStory() {
     const k = slice.k;
     const j = storyChapterIndex;
 
-    if (isFinaleScroll && finalePhase === "image") {
-      return finaleTotalWords;
-    }
-    if (isFinaleScroll && finalePhase === "fade") {
-      return finaleTotalWords;
-    }
-    if (isFinaleScroll && (finalePhase === "title" || finalePhase === "body")) {
+    if (isFinaleScroll) {
       const uF = clamp(k - (n - 1), 0, 1);
-      if (finalePhase === "title") {
-        const p = clamp(uF / FINALE_U_TITLE_END, 0, 1);
-        return p * finaleTitleWordCount;
-      }
-      const u0 = clamp((uF - FINALE_U_TITLE_END) / (FINALE_U_BODY_END - FINALE_U_TITLE_END), 0, 1);
-      return finaleTitleWordCount + u0 * finaleBodyWordCount;
+      if (uF <= FINALE_U_FADEIN_END) return 0;
+      if (uF >= FINALE_U_WORDS_END) return finaleBodyWordCount;
+      const u0 =
+        (uF - FINALE_U_FADEIN_END) / (FINALE_U_WORDS_END - FINALE_U_FADEIN_END);
+      return u0 * finaleBodyWordCount;
     }
+    /** Pre-roll fade-in (k ∈ [n−1−FINALE_PRE_ROLL_K, n−1]) — words stay dark until real finale scroll begins. */
+    if (j === lastChapterIndex) return 0;
 
     const w = countScrollWords(storyChapters[j]);
     if (w <= 0) return 0;
@@ -411,6 +427,7 @@ export default function CricketParticleStory() {
     finalePhase,
     n,
     finaleBodyWordCount,
+    lastChapterIndex,
   ]);
 
   const finaleScrollU = useMemo(
@@ -528,7 +545,8 @@ export default function CricketParticleStory() {
           portraitBandEpoch={portraitBandEpoch}
           finaleImageFormEpoch={finaleImageFormEpoch}
           finaleScatterBurst={finaleScatterBurst}
-          storyToImageEase={finaleImageForming ? "easeOutQuint" : "easeInOutCubic"}
+          finaleFlatScatter={isFinaleScroll}
+          storyToImageEase={finaleImageForming ? "easeInOutQuint" : "easeInOutCubic"}
           storyToImageDurationMs={
             finaleImageForming ? particlePortraitConfig.storyFinaleToImageMs : undefined
           }
@@ -559,7 +577,7 @@ export default function CricketParticleStory() {
           className="story-center-stage fixed inset-0 z-30 flex items-center justify-center px-4 md:px-12"
           aria-live="polite"
         >
-          {isFinaleScroll && finalePhase === "image" ? null : !isFinaleScroll ? (
+          {!isFinaleScroll && storyChapterIndex !== lastChapterIndex ? (
             <div
               className={`story-stage-inner ${
                 showDotsRightGutter ? "story-stage-inner--split" : "story-stage-inner--text-only"
@@ -585,6 +603,7 @@ export default function CricketParticleStory() {
                 <StoryBeatImageRail
                   storyChapterIndex={storyChapterIndex}
                   portraitBandU={portraitBandU}
+                  storyScrollK={slice.k}
                   copyOpacity={copyOpacity}
                   reducedMotion={prefersReducedMotion}
                 />
@@ -592,19 +611,19 @@ export default function CricketParticleStory() {
             </div>
           ) : (
             <div
-              className="story-stage-inner story-stage-inner--finale-centered mx-auto w-full max-w-[min(48rem,94vw)]"
-              style={{
-                opacity: copyOpacity,
-              }}
+              className="story-stage-inner story-stage-inner--text-only"
             >
-              <div className="story-stage-copy story-stage-copy--finale">
-                <div className="story-stage-single story-stage-single--finale">
+              <div
+                className="story-stage-copy story-stage-copy--scroll-fade"
+                style={{ opacity: copyOpacity }}
+              >
+                <div className="story-stage-single">
                   <LitChapter
                     key="finale"
                     chapter={finaleChapter}
                     head={wordHead}
                     reduced={prefersReducedMotion}
-                    isFinale
+                    isFinale={false}
                   />
                 </div>
               </div>

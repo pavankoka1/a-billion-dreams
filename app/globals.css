@@ -182,7 +182,13 @@ body::-webkit-scrollbar {
     var(--stream-purple-soft) 18px,
     var(--stream-purple-soft) 19px
   );
-  mask-image: linear-gradient(90deg, transparent 0%, black 40%, black 60%, transparent 100%);
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 40%,
+    black 60%,
+    transparent 100%
+  );
   animation: story-stream-flow 14s linear infinite;
 }
 
@@ -194,7 +200,13 @@ body::-webkit-scrollbar {
     var(--stream-cyan-soft) 42px,
     var(--stream-cyan-soft) 43px
   );
-  mask-image: linear-gradient(90deg, transparent 5%, black 45%, black 55%, transparent 95%);
+  mask-image: linear-gradient(
+    90deg,
+    transparent 5%,
+    black 45%,
+    black 55%,
+    transparent 95%
+  );
   animation: story-stream-flow 22s linear infinite reverse;
   opacity: 0.4;
 }
@@ -268,7 +280,7 @@ body::-webkit-scrollbar {
   pointer-events: none;
 }
 
-/* Right column: chapter SVG — no chrome; reveal is clip + motion on the image only */
+/* Right column: chapter artwork — reveal is clip + motion on the image only */
 .story-beat-rail {
   position: relative;
   min-width: 0;
@@ -285,7 +297,128 @@ body::-webkit-scrollbar {
   aspect-ratio: 3 / 4;
   object-fit: cover;
   object-position: center 28%;
+  transition:
+    opacity 0.4s ease,
+    transform 0.18s ease-out;
+}
+
+/**
+ * Tall portrait PNG — don’t crop feet: letterbox + bottom anchor (beats global `cover` + 3:4 box).
+ */
+.story-beat-rail__img--beat-sachin_struggle {
+  aspect-ratio: auto;
+  max-height: min(56vh, 540px);
+  width: min(100%, 24rem);
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/**
+ * Landscape cover drive — don’t crop the batsman / left arc: full frame inside rail (was losing left under `cover`).
+ */
+.story-beat-rail__img--beat-sachin_drive {
+  aspect-ratio: auto;
+  max-height: min(48vh, 400px);
+  width: min(100%, 26rem);
+  object-fit: contain;
+  object-position: left center;
+}
+
+/**
+ * Sachin vs the eleven — letterbox whole frame; vignette is a separate overlay (not mask on img).
+ */
+.story-beat-rail__img--beat-sachin_pak_standoff {
+  aspect-ratio: auto;
+  max-height: min(52vh, 440px);
+  width: min(100%, 26rem);
+  object-fit: contain;
+  object-position: center center;
+}
+
+/**
+ * Cinematic vignette frame — shared by vignette-framed beats
+ * (sachin_pak_standoff, sachin_drive, kohli_carry).
+ *
+ * The DOM is three-layered so sibling transforms can never drift apart:
+ *   wrap    → sizing + opacity + px drift (Pak)
+ *   reveal  → single element carrying ALL scroll-linked transforms (clip / filter / scale / drift%)
+ *   img + overlay → children of reveal, no transforms of their own
+ *
+ * Because img + overlay are children of the *same* transformed element, they move as one and
+ * the mask cannot get a sub-pixel gap vs the photo during rapid scroll.
+ */
+.story-beat-rail__vignette-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  /* Own stacking context → img (z:auto) always paints under overlay (z:1). */
+  isolation: isolate;
+  /* Clip any sub-pixel drift / filter bleed from the <reveal> element. */
+  overflow: hidden;
+}
+
+.story-beat-rail__vignette-reveal {
+  position: relative;
+  /* Inline-block so shrink-to-fit tracks the img's natural size — avoids circular 100% sizing
+   * inherited from the flex container above. Not a flex item here (wrap is its parent), so
+   * display: inline-block is honored (not blockified). */
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  /* No transitions — scroll drives this every frame, and any interpolation would re-introduce
+   * the sibling-drift glitch between img and overlay that the single-parent structure solves. */
+  transition: none;
+  transform-origin: 50% 50%;
+}
+
+/** Remove the base img transform transition inside the vignette frame — reveal drives it. */
+.story-beat-rail__vignette-wrap .story-beat-rail__img {
   transition: opacity 0.4s ease;
+}
+
+.story-beat-rail__vignette-overlay {
+  /**
+   * Every alpha below is multiplied by `--vignette-intensity` (set inline from
+   * `particlePortraitConfig.storyBeatRailVignetteIntensity`). 1 = baseline, <1 softer, >1 heavier.
+   * Alpha values clamp at 1.0 in the renderer so >~1.6 yields diminishing extra darkness.
+   */
+  --vignette-intensity: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  background:
+    radial-gradient(
+      ellipse 74% 70% at 50% 50%,
+      rgba(10, 10, 15, 0) 38%,
+      rgba(10, 10, 15, calc(0.26 * var(--vignette-intensity))) 58%,
+      rgba(10, 10, 15, calc(0.62 * var(--vignette-intensity))) 78%,
+      rgba(10, 10, 15, calc(0.85 * var(--vignette-intensity))) 94%,
+      rgba(10, 10, 15, calc(0.95 * var(--vignette-intensity))) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(10, 10, 15, 0) 76%,
+      rgba(10, 10, 15, calc(0.32 * var(--vignette-intensity))) 90%,
+      rgba(10, 10, 15, calc(0.65 * var(--vignette-intensity))) 100%
+    );
+  box-shadow:
+    inset 0 0 38px 14px rgba(10, 10, 15, calc(0.5 * var(--vignette-intensity))),
+    inset 0 0 90px 40px rgba(10, 10, 15, calc(0.32 * var(--vignette-intensity))),
+    inset 0 0 180px 80px rgba(10, 10, 15, calc(0.16 * var(--vignette-intensity)));
+}
+
+/**
+ * Kohli shot-of-the-century — near-portrait action shot (≈0.9:1): tall letterbox so bat + stumps + pads read clearly.
+ */
+.story-beat-rail__img--beat-kohli_carry {
+  aspect-ratio: auto;
+  max-height: min(56vh, 520px);
+  width: min(100%, 24rem);
+  object-fit: contain;
+  object-position: center center;
 }
 
 @media (prefers-reduced-motion: reduce) {

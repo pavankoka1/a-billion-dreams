@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="A Billion Dreams">
+  <defs>
+    <radialGradient id="nucleus" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#e4e4e7" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#667eea" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4facfe" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#667eea" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0a0a0f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" ry="96" fill="#0a0a0f"/>
+  <circle cx="256" cy="256" r="200" fill="url(#halo)"/>
+  <g fill="#e4e4e7">
+    <circle cx="256" cy="96" r="9"/>
+    <circle cx="338" cy="120" r="7"/>
+    <circle cx="400" cy="176" r="8"/>
+    <circle cx="424" cy="256" r="9"/>
+    <circle cx="400" cy="336" r="8"/>
+    <circle cx="338" cy="392" r="7"/>
+    <circle cx="256" cy="416" r="9"/>
+    <circle cx="174" cy="392" r="7"/>
+    <circle cx="112" cy="336" r="8"/>
+    <circle cx="88" cy="256" r="9"/>
+    <circle cx="112" cy="176" r="8"/>
+    <circle cx="174" cy="120" r="7"/>
+  </g>
+  <g fill="#a1a1aa">
+    <circle cx="256" cy="166" r="5"/>
+    <circle cx="314" cy="198" r="4.5"/>
+    <circle cx="346" cy="256" r="5"/>
+    <circle cx="314" cy="314" r="4.5"/>
+    <circle cx="256" cy="346" r="5"/>
+    <circle cx="198" cy="314" r="4.5"/>
+    <circle cx="166" cy="256" r="5"/>
+    <circle cx="198" cy="198" r="4.5"/>
+  </g>
+  <circle cx="256" cy="256" r="56" fill="url(#nucleus)"/>
+  <circle cx="256" cy="256" r="18" fill="#ffffff"/>
+</svg>

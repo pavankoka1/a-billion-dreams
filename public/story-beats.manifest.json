@@ -1,11 +1,16 @@
 {
   "defaultBeat": "duo_finale",
   "beats": {
-    "sachin_struggle": "story-beats/sachin-young.svg",
-    "sachin_pak_standoff": "story-beats/sachin-pak-standoff.svg",
-    "sachin_drive": "story-beats/sachin-cover-drive.svg",
-    "kohli_fire": "story-beats/kohli-angry.svg",
-    "kohli_carry": "story-beats/kohli-shot-of-century.svg",
-    "duo_finale": "target.svg"
+    "sachin_struggle": "story-beats/sachin-young.png",
+    "sachin_pak_standoff": "story-beats/sachin-pak-standoff.png",
+    "sachin_drive": "story-beats/sachin-cover-drive.png",
+    "kohli_fire": "story-beats/kohli-angry.png",
+    "kohli_carry": "story-beats/kohli-shot-of-century.png",
+    "duo_finale": {
+      "src": "target.svg",
+      "excludeRects": [
+        { "nx0": 0.855, "ny0": 0.82, "nx1": 1.0, "ny1": 1.0 }
+      ]
+    }
   }
 }
