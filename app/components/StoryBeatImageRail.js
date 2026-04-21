@@ -138,9 +138,10 @@ export default function StoryBeatImageRail({
 
   const opacity = Math.min(1, (copyOpacity ?? 1) * (0.5 + 0.5 * revealVis));
 
+  const vignetteBase = cfg.storyBeatRailVignetteIntensity ?? 1;
   const vignetteIntensity = Math.max(
     0,
-    cfg.storyBeatRailVignetteIntensity ?? 1,
+    beatId === "kohli_carry" ? vignetteBase * 0.5 : vignetteBase,
   );
 
   /** Non-vignette beats: the img keeps carrying everything (legacy path, untouched). */

@@ -85,7 +85,7 @@ export const particlePortraitConfig = {
   storyChapterToImageMs: 4000,
 
   /** Duo Virat & Sachin — morph length from flat scatter → final portrait. */
-  storyFinaleToImageMs: 1000,
+  storyFinaleToImageMs: 1400,
 
   /**
    * When `true`, the duo morph is an elegant per-particle travel: random (not radial) stagger so no

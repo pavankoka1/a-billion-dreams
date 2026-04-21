@@ -410,6 +410,20 @@ body::-webkit-scrollbar {
     inset 0 0 180px 80px rgba(10, 10, 15, calc(0.16 * var(--vignette-intensity)));
 }
 
+/* Kohli carry: softer symmetric vignette avoids right-edge dark strip artifacts. */
+.story-beat-rail__vignette-wrap--beat-kohli_carry .story-beat-rail__vignette-overlay {
+  background: radial-gradient(
+    ellipse 76% 72% at 50% 50%,
+    rgba(10, 10, 15, 0) 40%,
+    rgba(10, 10, 15, calc(0.2 * var(--vignette-intensity))) 62%,
+    rgba(10, 10, 15, calc(0.38 * var(--vignette-intensity))) 82%,
+    rgba(10, 10, 15, calc(0.52 * var(--vignette-intensity))) 100%
+  );
+  box-shadow:
+    inset 0 0 32px 12px rgba(10, 10, 15, calc(0.22 * var(--vignette-intensity))),
+    inset 0 0 78px 34px rgba(10, 10, 15, calc(0.12 * var(--vignette-intensity)));
+}
+
 /**
  * Kohli shot-of-the-century — near-portrait action shot (≈0.9:1): tall letterbox so bat + stumps + pads read clearly.
  */

@@ -1,31 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
   particleBackgroundRgb,
   particlePortraitConfig,
   particleThemeColorRgb,
 } from "@/config/particlePortrait.config";
-import { initWebGLParticles } from "@/lib/particleWebglRenderer";
+import { CHAPTER_TARGET_BEATS, STORY_CONFIG } from "@/lib/cricketParticleStory";
 import {
   flowRibbonMotionStep,
   seedFlowRibbonParticle,
 } from "@/lib/flowRibbonField";
+import { layoutTarget } from "@/lib/particleSvgSample";
+import { loadParticleStoryTargets } from "@/lib/particleTargetsLoader";
+import { initWebGLParticles } from "@/lib/particleWebglRenderer";
 import {
   getSvgStructureCache,
   loadSvgStructureForScatter,
   sampleSvgStructureScatter,
 } from "@/lib/svgStructureScatter";
-import { CHAPTER_TARGET_BEATS, STORY_CONFIG } from "@/lib/cricketParticleStory";
-import { layoutTarget } from "@/lib/particleSvgSample";
-import { loadParticleStoryTargets } from "@/lib/particleTargetsLoader";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function easeOutCubic(t) {
   return 1 - (1 - t) ** 3;
 }
 
-function easeInCubic(t) {
-  return t * t * t;
+function easeInQuad(t) {
+  return t * t;
 }
 
 /** Symmetric — gentle acceleration and deceleration (elegant chapter morphs). */
@@ -46,6 +46,10 @@ function easeInOutQuint(t) {
 /** Softer than cubic — slow start, smooth end. */
 function easeInOutQuart(t) {
   return t < 0.5 ? 8 * t * t * t * t : 1 - (-2 * t + 2) ** 4 / 2;
+}
+
+function easingFunc(t) {
+  return Math.pow(t, 0.25);
 }
 
 /**
@@ -69,9 +73,12 @@ function easeFinalePortrait(t) {
 }
 
 function easeToImageByMode(easeMode, rawT) {
+  return easingFunc(rawT);
   switch (easeMode) {
+    case "easeInQuad":
+      return easeInQuad(rawT);
     case "easeInCubic":
-      return easeInCubic(rawT);
+      return easeInQuad(rawT);
     case "easeInOutCubic":
       return easeInOutCubic(rawT);
     case "easeInOutQuart":
@@ -90,11 +97,21 @@ function easeToImageByMode(easeMode, rawT) {
  * Sachin/Kohli story scatter — one sample per particle from the full SVG stipple (literal silhouette).
  * Wing/center labels come from each sample’s x-position for orchestrated motion only.
  */
-function sampleStoryScatter(innerW, innerH, particleIndex, clusterSpreadFrac = 0) {
+function sampleStoryScatter(
+  innerW,
+  innerH,
+  particleIndex,
+  clusterSpreadFrac = 0,
+) {
   if (!getSvgStructureCache()) {
     throw new Error("ParticlePortrait: SVG scatter mask not loaded");
   }
-  return sampleSvgStructureScatter(innerW, innerH, particleIndex, clusterSpreadFrac);
+  return sampleSvgStructureScatter(
+    innerW,
+    innerH,
+    particleIndex,
+    clusterSpreadFrac,
+  );
 }
 
 /**
@@ -109,12 +126,12 @@ function orchestratedScatterMotionStep(
   timeMs,
   scrollPaceMul,
   wingPhaseBase,
-  cfg
+  cfg,
 ) {
   const WH = Math.min(innerW, innerH);
   const pace = Math.max(
     cfg.scatterScrollPaceMinMul ?? 1,
-    Math.min(cfg.scatterScrollPaceMaxMul ?? 1.5, scrollPaceMul ?? 1)
+    Math.min(cfg.scatterScrollPaceMaxMul ?? 1.5, scrollPaceMul ?? 1),
   );
   const t = timeMs * 0.001 * pace;
   const phase = wingPhaseBase * (cfg.scatterScrollPhaseScale ?? 0.0032);
@@ -242,7 +259,7 @@ export default function ParticlePortrait({
   const defaultBeatRef = useRef("duo_finale");
   const lastStoryVisualRef = useRef({ portrait: false, beat: null });
   const beginImageTransitionFromCurrentRef = useRef(
-    /** @type {(opts?: { durationMs?: number }) => void} */ (() => {})
+    /** @type {(opts?: { durationMs?: number }) => void} */ (() => {}),
   );
   const [status, setStatus] = useState("loading");
   const [hint, setHint] = useState(true);
@@ -329,10 +346,8 @@ export default function ParticlePortrait({
       const inst = Math.min(Math.abs(dScrollFrame), cap);
       const rf = cfgScroll.scatterScrollFastRetain ?? 0.88;
       const rs = cfgScroll.scatterScrollSlowRetain ?? 0.974;
-      const vf =
-        (visualRef.current._scrollVelFast ?? 0) * rf + inst * (1 - rf);
-      const vs =
-        (visualRef.current._scrollVelSlow ?? 0) * rs + vf * (1 - rs);
+      const vf = (visualRef.current._scrollVelFast ?? 0) * rf + inst * (1 - rf);
+      const vs = (visualRef.current._scrollVelSlow ?? 0) * rs + vf * (1 - rs);
       visualRef.current._scrollVelFast = vf;
       visualRef.current._scrollVelSlow = vs;
 
@@ -367,9 +382,10 @@ export default function ParticlePortrait({
       phase === "scatter" || phase === "image"
         ? 1
         : Math.min(1, elapsed / duration);
+    const easeMode = visualRef.current.storyToImageEase ?? "easeInCubic";
     const t =
       phase === "toImage"
-        ? rawT
+        ? easeToImageByMode(easeMode, rawT)
         : easeOutCubic(rawT);
 
     const {
@@ -394,7 +410,15 @@ export default function ParticlePortrait({
       let y = p.y;
 
       if (phase === "toImage") {
-        const end = layoutTarget(p.nx, p.ny, innerW, innerH, lw, lh, layoutZoom);
+        const end = layoutTarget(
+          p.nx,
+          p.ny,
+          innerW,
+          innerH,
+          lw,
+          lh,
+          layoutZoom,
+        );
         const dx = end.x + ox - p.sx;
         const dy = end.y - p.sy;
         x = p.sx + dx * t;
@@ -424,7 +448,7 @@ export default function ParticlePortrait({
             innerH,
             timeMs,
             scrollPaceMul,
-            particlePortraitConfig
+            particlePortraitConfig,
           );
         } else {
           orchestratedScatterMotionStep(
@@ -434,7 +458,7 @@ export default function ParticlePortrait({
             timeMs,
             scrollPaceMul,
             wingPhaseBase,
-            particlePortraitConfig
+            particlePortraitConfig,
           );
         }
         const padSc = scatterCanvasEdgePad(pointDiameterPx, dpr);
@@ -446,7 +470,15 @@ export default function ParticlePortrait({
         x = p.x;
         y = p.y;
       } else if (phase === "image") {
-        const end = layoutTarget(p.nx, p.ny, innerW, innerH, lw, lh, layoutZoom);
+        const end = layoutTarget(
+          p.nx,
+          p.ny,
+          innerW,
+          innerH,
+          lw,
+          lh,
+          layoutZoom,
+        );
         p.x = end.x + ox;
         p.y = end.y;
         x = p.x;
@@ -469,11 +501,22 @@ export default function ParticlePortrait({
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     const scatterBlend =
-      particlePortraitConfig.scatterAdditiveBlend !== false ? "additive" : "normal";
-    renderer.draw(positions, n, [innerW, innerH], dpr, pointDiameterPx, alpha, pcr, {
-      blend: portraitPhase ? "normal" : scatterBlend,
-      useParticleStyle: !portraitPhase,
-    });
+      particlePortraitConfig.scatterAdditiveBlend !== false
+        ? "additive"
+        : "normal";
+    renderer.draw(
+      positions,
+      n,
+      [innerW, innerH],
+      dpr,
+      pointDiameterPx,
+      alpha,
+      pcr,
+      {
+        blend: portraitPhase ? "normal" : scatterBlend,
+        useParticleStyle: !portraitPhase,
+      },
+    );
 
     if (phase === "toImage" && rawT >= 1) {
       s.phase = "image";
@@ -486,7 +529,7 @@ export default function ParticlePortrait({
           innerH,
           lw,
           lh,
-          particlePortraitConfig.portraitLayoutZoom ?? 1
+          particlePortraitConfig.portraitLayoutZoom ?? 1,
         );
         p.x = end.x + ox;
         p.y = end.y;
@@ -541,14 +584,17 @@ export default function ParticlePortrait({
 
   beginImageTransitionFromCurrentRef.current = beginImageTransitionFromCurrent;
 
-  const beginPortraitTransition = useCallback((allowInterrupt) => {
-    const s = stateRef.current;
-    const { particles, phase } = s;
-    if (particles.length === 0) return;
-    if (phase === "toImage" || phase === "toScatter") return;
-    if (!allowInterrupt && phase !== "scatter") return;
-    beginImageTransitionFromCurrent();
-  }, [beginImageTransitionFromCurrent]);
+  const beginPortraitTransition = useCallback(
+    (allowInterrupt) => {
+      const s = stateRef.current;
+      const { particles, phase } = s;
+      if (particles.length === 0) return;
+      if (phase === "toImage" || phase === "toScatter") return;
+      if (!allowInterrupt && phase !== "scatter") return;
+      beginImageTransitionFromCurrent();
+    },
+    [beginImageTransitionFromCurrent],
+  );
 
   const beginScatterTransition = useCallback((allowInterrupt, opts) => {
     const s = stateRef.current;
@@ -569,8 +615,8 @@ export default function ParticlePortrait({
     const pad = scatterCanvasEdgePad(scatterD, dpr);
     const seedK = particlePortraitConfig.cohesiveClusterSpread ?? 0.01;
     const flowRibbon =
-      (particlePortraitConfig.scatterLayoutPreset === "flowRibbon" ||
-        particlePortraitConfig.scatterMotionPreset === "flowRibbon");
+      particlePortraitConfig.scatterLayoutPreset === "flowRibbon" ||
+      particlePortraitConfig.scatterMotionPreset === "flowRibbon";
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       p.sx = p.x;
@@ -594,7 +640,7 @@ export default function ParticlePortrait({
           innerH,
           i,
           seedK,
-          particlePortraitConfig
+          particlePortraitConfig,
         );
         const cl = clampScatterXY(sc.rx, sc.ry, innerW, innerH, pad);
         p.rx = cl.x;
@@ -819,10 +865,13 @@ export default function ParticlePortrait({
                 zoneBands: particlePortraitConfig.scatterZoneBands,
                 structureJitterPx:
                   particlePortraitConfig.scatterStructureJitterPx ?? 0,
-              }
+              },
             );
           } catch (err) {
-            console.warn("[ParticlePortrait] SVG scatter mask load failed", err);
+            console.warn(
+              "[ParticlePortrait] SVG scatter mask load failed",
+              err,
+            );
           }
           if (!getSvgStructureCache()) {
             if (!cancelled) setStatus("error");
@@ -836,19 +885,38 @@ export default function ParticlePortrait({
         const ch = canvasRef.current?.clientHeight ?? canvas.clientHeight;
         const innerW = cw || window.innerWidth;
         const innerH = ch || window.innerHeight;
+        const seedFlatScatter = visualRef.current.finaleFlatScatter === true;
+        const scatterD = particlePortraitConfig.scatterDotRadius * 2;
+        const scatterPad = scatterCanvasEdgePad(scatterD, dprRef.current);
         const particles = [];
-        const seedCluster = particlePortraitConfig.cohesiveClusterSpread ?? 0.01;
+        const seedCluster =
+          particlePortraitConfig.cohesiveClusterSpread ?? 0.01;
         const buf = positionsRef.current;
         for (let i = 0; i < nxny.length; i++) {
           const { nx, ny } = nxny[i];
           let sc;
-          if (flowRibbon) {
+          if (seedFlatScatter) {
+            const rx =
+              scatterPad + Math.random() * Math.max(1, innerW - scatterPad * 2);
+            const ry =
+              scatterPad + Math.random() * Math.max(1, innerH - scatterPad * 2);
+            sc = {
+              rx,
+              ry,
+              scatterZone: undefined,
+              flowRegion: undefined,
+              flowU: 0,
+              flowV: 0,
+              sizeMul: 1,
+              alphaMul: 1,
+            };
+          } else if (flowRibbon) {
             sc = seedFlowRibbonParticle(
               innerW,
               innerH,
               i,
               seedCluster,
-              particlePortraitConfig
+              particlePortraitConfig,
             );
           } else {
             sc = sampleStoryScatter(innerW, innerH, i, seedCluster);
@@ -944,7 +1012,7 @@ export default function ParticlePortrait({
         className="block h-full w-full"
         style={{
           background: `rgb(${Math.round(backgroundRgb[0] * 255)}, ${Math.round(
-            backgroundRgb[1] * 255
+            backgroundRgb[1] * 255,
           )}, ${Math.round(backgroundRgb[2] * 255)})`,
         }}
       />
@@ -955,15 +1023,16 @@ export default function ParticlePortrait({
       )}
       {status === "webgl-error" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center font-sans text-sm text-amber-200/95">
-          WebGL2 is required for particle rendering. Enable hardware acceleration or update your browser,
-          then reload.
+          WebGL2 is required for particle rendering. Enable hardware
+          acceleration or update your browser, then reload.
         </div>
       )}
       {status === "error" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center font-sans text-sm text-red-300/90">
-          Could not load particle data. Check <code className="mx-1">public/target.svg</code> and{" "}
-          <code className="mx-1">app/config/particlePortrait.config.js</code>, or run{" "}
-          <code className="mx-1">npm run generate:particles</code>.
+          Could not load particle data. Check{" "}
+          <code className="mx-1">public/target.svg</code> and{" "}
+          <code className="mx-1">app/config/particlePortrait.config.js</code>,
+          or run <code className="mx-1">npm run generate:particles</code>.
         </div>
       )}
       {status === "ready" && hint && !storyMode && (

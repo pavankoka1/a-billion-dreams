@@ -137,8 +137,16 @@ function usePrefersReducedMotion() {
 }
 
 function useScrollMetrics() {
-  const [scrollY, setScrollY] = useState(0);
-  const [docMax, setDocMax] = useState(1);
+  const [scrollY, setScrollY] = useState(() =>
+    typeof window !== "undefined" ? window.scrollY : 0,
+  );
+  const [docMax, setDocMax] = useState(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return 1;
+    }
+    const el = document.documentElement;
+    return Math.max(1, el.scrollHeight - window.innerHeight);
+  });
 
   const update = () => {
     setScrollY(window.scrollY);
@@ -560,7 +568,7 @@ export default function CricketParticleStory() {
           finaleScatterBurst={finaleScatterBurst}
           finaleFlatScatter={isFinaleScroll}
           storyToImageEase={
-            "easeFinalePortrait"
+            "easeInQuad"
           }
           storyToImageDurationMs={
             finaleImageForming
