@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Lora } from "next/font/google";
+import { getSiteUrl } from "./lib/siteUrl";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,20 +17,23 @@ const lora = Lora({
   subsets: ["latin"],
 });
 
-/**
- * Canonical site URL. Override at build/deploy time with:
- *   NEXT_PUBLIC_SITE_URL=https://your-domain.example
- * Falls back to a placeholder so relative OG / canonical URLs still resolve
- * to an absolute value (Next.js `metadataBase` requires one).
- */
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://a-billion-dreams.example";
+const SITE_URL = getSiteUrl();
 
 const SITE_NAME = "A Billion Dreams";
 const TITLE = "A Billion Dreams — a particle portrait of two cricketing lives";
 const DESCRIPTION =
   "A scroll-driven WebGL story where a billion points of light gather into a portrait. Sachin Tendulkar and Virat Kohli — waiting, striking, roaring, carrying — rendered as continuity, memory, and light.";
+const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
+
+const verification = {
+  ...(GOOGLE_SITE_VERIFICATION
+    ? { google: GOOGLE_SITE_VERIFICATION }
+    : {}),
+  ...(BING_SITE_VERIFICATION
+    ? { other: { "msvalidate.01": BING_SITE_VERIFICATION } }
+    : {}),
+};
 
 export const viewport = {
   width: "device-width",
@@ -77,7 +81,7 @@ export const metadata = {
     canonical: "/",
   },
   openGraph: {
-    type: "article",
+    type: "website",
     url: "/",
     siteName: SITE_NAME,
     title: TITLE,
@@ -99,6 +103,7 @@ export const metadata = {
     description: DESCRIPTION,
     images: ["/twitter-image.png"],
   },
+  ...(Object.keys(verification).length > 0 ? { verification } : {}),
   robots: {
     index: true,
     follow: true,
