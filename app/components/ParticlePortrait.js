@@ -1016,7 +1016,7 @@ export default function ParticlePortrait({
           )}, ${Math.round(backgroundRgb[2] * 255)})`,
         }}
       />
-      {status === "loading" && (
+      {status === "loading" && !storyMode && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center font-sans text-sm text-white/50">
           Loading particle targets…
         </div>
