@@ -585,7 +585,7 @@ export default function CricketParticleStory() {
       <StoryLoadingOverlay visible={!assetsReady} />
 
       <header
-        className="pointer-events-none fixed left-6 top-6 z-50 md:left-10 md:top-8"
+        className="pointer-events-none fixed left-4 top-3 z-50 md:left-10 md:top-8"
         aria-label="Site"
       >
         <p className="story-site-title font-[family-name:var(--font-story)] text-[0.65rem] font-medium uppercase tracking-[0.35em] text-zinc-500 md:text-[0.7rem]">

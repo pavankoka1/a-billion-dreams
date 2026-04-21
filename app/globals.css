@@ -86,7 +86,8 @@ body::-webkit-scrollbar {
   .story-center-stage {
     align-items: flex-start;
     justify-content: flex-start;
-    padding-top: max(0.75rem, env(safe-area-inset-top));
+    /* Reserve room for fixed top-left logo so copy never sits underneath it. */
+    padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 2.75rem));
   }
 
   .story-stage-inner--split {
@@ -128,7 +129,7 @@ body::-webkit-scrollbar {
   .story-stage-inner--text-only {
     max-height: 50vh;
     margin-top: 0;
-    padding-top: 0.5rem;
+    padding-top: 0.75rem;
     overflow-y: auto;
   }
 
