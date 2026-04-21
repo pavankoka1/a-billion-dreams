@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Lora } from "next/font/google";
+import ConsoleSignature from "./components/ConsoleSignature";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import { getSiteUrl } from "./lib/siteUrl";
 import "./globals.css";
@@ -19,6 +20,10 @@ const lora = Lora({
 });
 
 const SITE_URL = getSiteUrl();
+const AUTHOR_NAME = "Pavan Koka";
+const AUTHOR_LINKEDIN = "https://linkedin.com/in/pavan-koka-419680148";
+const AUTHOR_GITHUB = "https://github.com/pavankoka1";
+const AUTHOR_PORTFOLIO = "https://koka-lab.vercel.app";
 
 const SITE_NAME = "A Billion Dreams";
 const TITLE = "A Billion Dreams — a particle portrait of two cricketing lives";
@@ -72,9 +77,9 @@ export const metadata = {
     "Next.js 16",
     "React 19",
   ],
-  authors: [{ name: "Pavan Kurmarao" }],
-  creator: "Pavan Kurmarao",
-  publisher: "Pavan Kurmarao",
+  authors: [{ name: AUTHOR_NAME, url: AUTHOR_PORTFOLIO }],
+  creator: AUTHOR_NAME,
+  publisher: AUTHOR_NAME,
   category: "art",
   classification: "Interactive Story",
   referrer: "origin-when-cross-origin",
@@ -167,11 +172,15 @@ const jsonLd = {
   ],
   author: {
     "@type": "Person",
-    name: "Pavan Kurmarao",
+    name: AUTHOR_NAME,
+    url: AUTHOR_PORTFOLIO,
+    sameAs: [AUTHOR_LINKEDIN, AUTHOR_GITHUB, AUTHOR_PORTFOLIO],
   },
   creator: {
     "@type": "Person",
-    name: "Pavan Kurmarao",
+    name: AUTHOR_NAME,
+    url: AUTHOR_PORTFOLIO,
+    sameAs: [AUTHOR_LINKEDIN, AUTHOR_GITHUB, AUTHOR_PORTFOLIO],
   },
   isAccessibleForFree: true,
 };
@@ -189,6 +198,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} antialiased`}
       >
+        <ConsoleSignature />
         <ServiceWorkerRegister />
         {children}
       </body>
