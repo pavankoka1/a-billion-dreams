@@ -62,13 +62,16 @@ const beats = {};
 
 /**
  * Manifest entries may be either `"path.ext"` (back-compat) or
- * `{ src: "path.ext", excludeRects: [{nx0, ny0, nx1, ny1}] }`. Exclude rects
- * let us guarantee dead zones (e.g. watermark corner) stay empty even when a
- * few stray source paths survive SVG cleaning.
+ * `{ src: "path.ext", excludeRects: [{nx0, ny0, nx1, ny1}], svgSample?: {...} }`.
+ * Exclude rects let us guarantee dead zones (e.g. watermark corner) stay empty
+ * even when a few stray source paths survive SVG cleaning. `svgSample` allows
+ * per-beat overrides for SVG sampling knobs (area/length/chroma/weight), so we
+ * can tune noisy traced artwork without affecting other beats.
  */
 for (const [beatId, entry] of Object.entries(manifest.beats)) {
   const relPath = typeof entry === "string" ? entry : entry.src;
   const excludeRects = typeof entry === "string" ? [] : (entry.excludeRects ?? []);
+  const svgSample = typeof entry === "string" ? null : (entry.svgSample ?? null);
   const oversample = excludeRects.length > 0 ? 1.25 : 1;
 
   let absPath = join(root, "public", relPath);
@@ -135,7 +138,7 @@ for (const [beatId, entry] of Object.entries(manifest.beats)) {
 
     data = await page.evaluate(
       (payload) => {
-        const { svgText: text, count } = payload;
+        const { svgText: text, count, sampleOpts } = payload;
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, "image/svg+xml");
         const el = doc.documentElement;
@@ -143,9 +146,13 @@ for (const [beatId, entry] of Object.entries(manifest.beats)) {
         host.innerHTML = "";
         host.appendChild(document.importNode(el, true));
         const svgNode = host.querySelector("svg");
-        return globalThis.ParticleSvgSample.samplePointsFromSvgRoot(svgNode, count);
+        return globalThis.ParticleSvgSample.samplePointsFromSvgRoot(
+          svgNode,
+          count,
+          sampleOpts || {}
+        );
       },
-      { svgText, count: requestedCount }
+      { svgText, count: requestedCount, sampleOpts: svgSample }
     );
   }
 

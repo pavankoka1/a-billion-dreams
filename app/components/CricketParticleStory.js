@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   openingHeaderDotColorRgb,
   particleBackgroundRgb,
@@ -8,15 +7,16 @@ import {
   particleThemeColorRgb,
   scatterAmbientParticleColorRgb,
 } from "@/config/particlePortrait.config";
-import ParticlePortrait from "./ParticlePortrait";
-import StoryBeatImageRail from "./StoryBeatImageRail";
-import StoryLoadingOverlay from "./StoryLoadingOverlay";
-import StoryWatcherProgress from "./StoryWatcherProgress";
-import { STORY_CONFIG, storyChapters } from "../lib/cricketParticleStory";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PORTRAIT_SCATTER_PREFIX,
   useStoryPortraitScroll,
 } from "../hooks/useStoryPortraitScroll";
+import { STORY_CONFIG, storyChapters } from "../lib/cricketParticleStory";
+import ParticlePortrait from "./ParticlePortrait";
+import StoryBeatImageRail from "./StoryBeatImageRail";
+import StoryLoadingOverlay from "./StoryLoadingOverlay";
+import StoryWatcherProgress from "./StoryWatcherProgress";
 
 /**
  * Within each chapter’s scroll band, `u` ∈ [0, 1] is split sequentially (must sum to 1):
@@ -103,9 +103,11 @@ function chapterCopyOpacity(k, chapterIndex, n, reduced, isFinaleScroll) {
       if (uF < FINALE_U_HOLD_END) return 1;
       if (uF < FINALE_U_TEXT_OUT_END) {
         return clamp(
-          1 - (uF - FINALE_U_HOLD_END) / (FINALE_U_TEXT_OUT_END - FINALE_U_HOLD_END),
+          1 -
+            (uF - FINALE_U_HOLD_END) /
+              (FINALE_U_TEXT_OUT_END - FINALE_U_HOLD_END),
           0,
-          1
+          1,
         );
       }
       return 0;
@@ -201,7 +203,11 @@ function LitChapter({
     const i = wi;
     wi += 1;
     return (
-      <span key={key} className="story-lit-word" style={{ color: wordColor(i, head, reduced) }}>
+      <span
+        key={key}
+        className="story-lit-word"
+        style={{ color: wordColor(i, head, reduced) }}
+      >
         {w}
       </span>
     );
@@ -227,7 +233,11 @@ function LitChapter({
       const i = fwi;
       fwi += 1;
       return (
-        <span key={key} className="story-lit-word" style={{ color: wordColor(i, head, reduced) }}>
+        <span
+          key={key}
+          className="story-lit-word"
+          style={{ color: wordColor(i, head, reduced) }}
+        >
           {w}
         </span>
       );
@@ -254,7 +264,9 @@ function LitChapter({
           </p>
         ) : null}
         {chapter.title ? (
-          <h2 className="story-flip-title story-flip-title--finale">{fLine(chapter.title, "ft")}</h2>
+          <h2 className="story-flip-title story-flip-title--finale">
+            {fLine(chapter.title, "ft")}
+          </h2>
         ) : null}
         <div className="story-flip-lines story-flip-lines--block">
           {chapter.lines.map((line, i) => (
@@ -282,10 +294,14 @@ function LitChapter({
       }`}
     >
       {chapter.kicker ? (
-        <p className="story-flip-kicker story-flip-kicker--static">{chapter.kicker}</p>
+        <p className="story-flip-kicker story-flip-kicker--static">
+          {chapter.kicker}
+        </p>
       ) : null}
       {chapter.title ? (
-        <h2 className="story-flip-title story-flip-title--static">{chapter.title}</h2>
+        <h2 className="story-flip-title story-flip-title--static">
+          {chapter.title}
+        </h2>
       ) : null}
       <div className="story-flip-lines story-flip-lines--block">
         {chapter.lines.map((line, i) => (
@@ -369,7 +385,7 @@ export default function CricketParticleStory() {
   const finaleChapter = storyChapters[lastChapterIndex];
   const finaleBodyWordCount = useMemo(
     () => countFinaleBodyWords(finaleChapter),
-    [finaleChapter]
+    [finaleChapter],
   );
 
   const finalePhase = useMemo(() => {
@@ -432,7 +448,7 @@ export default function CricketParticleStory() {
 
   const finaleScrollU = useMemo(
     () => clamp(slice.k - (n - 1), 0, 1),
-    [slice.k, n]
+    [slice.k, n],
   );
 
   const {
@@ -473,10 +489,7 @@ export default function CricketParticleStory() {
     if (!storyAmbientOnly) return 0;
     if (portraitBandU === null) return 1;
     if (portraitHoldScatter) {
-      return (
-        0.28 +
-        0.72 * clamp(portraitBandU / PORTRAIT_SCATTER_PREFIX, 0, 1)
-      );
+      return 0.28 + 0.72 * clamp(portraitBandU / PORTRAIT_SCATTER_PREFIX, 0, 1);
     }
     return 1;
   }, [storyAmbientOnly, portraitBandU, portraitHoldScatter]);
@@ -488,7 +501,7 @@ export default function CricketParticleStory() {
     if (portraitMode) return 1;
     return Math.min(
       0.94,
-      0.02 + scrollProgress * 1.15 + storyChapterIndex * 0.055
+      0.02 + scrollProgress * 1.15 + storyChapterIndex * 0.055,
     );
   }, [storyChapterIndex, firstImage, portraitMode, scrollProgress]);
 
@@ -508,7 +521,7 @@ export default function CricketParticleStory() {
       storyChapterIndex,
       n,
       prefersReducedMotion,
-      isFinaleScroll
+      isFinaleScroll,
     );
   }, [slice.k, storyChapterIndex, prefersReducedMotion, n, isFinaleScroll]);
 
@@ -546,9 +559,13 @@ export default function CricketParticleStory() {
           finaleImageFormEpoch={finaleImageFormEpoch}
           finaleScatterBurst={finaleScatterBurst}
           finaleFlatScatter={isFinaleScroll}
-          storyToImageEase={finaleImageForming ? "easeInOutQuint" : "easeInOutCubic"}
+          storyToImageEase={
+            "easeFinalePortrait"
+          }
           storyToImageDurationMs={
-            finaleImageForming ? particlePortraitConfig.storyFinaleToImageMs : undefined
+            finaleImageForming
+              ? particlePortraitConfig.storyFinaleToImageMs
+              : undefined
           }
           finaleFormMorph={finaleImageForming}
           storyAmbientOnly={storyAmbientOnly}
@@ -580,7 +597,9 @@ export default function CricketParticleStory() {
           {!isFinaleScroll && storyChapterIndex !== lastChapterIndex ? (
             <div
               className={`story-stage-inner ${
-                showDotsRightGutter ? "story-stage-inner--split" : "story-stage-inner--text-only"
+                showDotsRightGutter
+                  ? "story-stage-inner--split"
+                  : "story-stage-inner--text-only"
               }`}
             >
               <div
@@ -610,9 +629,7 @@ export default function CricketParticleStory() {
               ) : null}
             </div>
           ) : (
-            <div
-              className="story-stage-inner story-stage-inner--text-only"
-            >
+            <div className="story-stage-inner story-stage-inner--text-only">
               <div
                 className="story-stage-copy story-stage-copy--scroll-fade"
                 style={{ opacity: copyOpacity }}

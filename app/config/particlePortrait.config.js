@@ -17,7 +17,7 @@ export const particleBackgroundRgb = [10 / 255, 10 / 255, 15 / 255];
 export const particlePortraitConfig = {
   particleCount: 200000,
 
-  portraitDotRadius: 0.01,
+  portraitDotRadius: 0.05,
 
   scatterDotRadius: 0.0045,
   scatterPerParticleAlpha: 0.42,
@@ -85,7 +85,7 @@ export const particlePortraitConfig = {
   storyChapterToImageMs: 4000,
 
   /** Duo Virat & Sachin — morph length from flat scatter → final portrait. */
-  storyFinaleToImageMs: 1400,
+  storyFinaleToImageMs: 1000,
 
   /**
    * When `true`, the duo morph is an elegant per-particle travel: random (not radial) stagger so no
@@ -95,10 +95,10 @@ export const particlePortraitConfig = {
   finaleMorphDirect: true,
 
   /** Max delay before a particle starts travelling, as a fraction of total duration. */
-  finaleMorphStaggerSpread: 0.32,
+  finaleMorphStaggerSpread: 0.3,
 
   /** Perpendicular arc amplitude, as a fraction of min(innerW, innerH). */
-  finaleMorphArcScale: 0.055,
+  finaleMorphArcScale: 0.024,
 
   /** Transition length for the "uniform flat scatter" re-seed tween (ms). */
   finaleFlatScatterInMs: 900,

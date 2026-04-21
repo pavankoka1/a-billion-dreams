@@ -8,6 +8,12 @@
     "kohli_carry": "story-beats/kohli-shot-of-century.png",
     "duo_finale": {
       "src": "target.svg",
+      "svgSample": {
+        "minBboxArea": 160,
+        "minPathLength": 16,
+        "minChroma": 6,
+        "weight": "length"
+      },
       "excludeRects": [
         { "nx0": 0.855, "ny0": 0.82, "nx1": 1.0, "ny1": 1.0 }
       ]
