@@ -12,7 +12,11 @@ import {
   PORTRAIT_SCATTER_PREFIX,
   useStoryPortraitScroll,
 } from "../hooks/useStoryPortraitScroll";
-import { STORY_CONFIG, storyChapters } from "../lib/cricketParticleStory";
+import {
+  STORY_CHAPTER_VISUAL_SRC,
+  STORY_CONFIG,
+  storyChapters,
+} from "../lib/cricketParticleStory";
 import ParticlePortrait from "./ParticlePortrait";
 import StoryBeatImageRail from "./StoryBeatImageRail";
 import StoryLoadingOverlay from "./StoryLoadingOverlay";
@@ -336,6 +340,45 @@ export default function CricketParticleStory() {
   const [openingEntranceOn, setOpeningEntranceOn] = useState(false);
   const handleParticleStatus = useCallback((status) => {
     if (status === "ready") setAssetsReady(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const warmup = () => {
+      if (cancelled || typeof window === "undefined") return;
+
+      const imageUrls = Object.values(STORY_CHAPTER_VISUAL_SRC).filter(Boolean);
+      for (const src of imageUrls) {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = src;
+      }
+
+      const staticAssets = [
+        "/particle-targets.json",
+        "/story-beats.manifest.json",
+        "/target.svg",
+        "/grok-scatter-structure.svg",
+      ];
+      for (const url of staticAssets) {
+        fetch(url, { cache: "force-cache" }).catch(() => {});
+      }
+    };
+
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(warmup, { timeout: 1800 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(id);
+      };
+    }
+
+    const t = window.setTimeout(warmup, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, []);
 
   useEffect(() => {

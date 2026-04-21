@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Lora } from "next/font/google";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import { getSiteUrl } from "./lib/siteUrl";
 import "./globals.css";
 
@@ -188,6 +189,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} antialiased`}
       >
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>
