@@ -371,6 +371,8 @@ body::-webkit-scrollbar {
    * the sibling-drift glitch between img and overlay that the single-parent structure solves. */
   transition: none;
   transform-origin: 50% 50%;
+  /* Hard-clip children after scroll transforms so sub-pixel seams never leak at edges. */
+  overflow: hidden;
 }
 
 /** Remove the base img transform transition inside the vignette frame — reveal drives it. */
@@ -386,7 +388,8 @@ body::-webkit-scrollbar {
    */
   --vignette-intensity: 1;
   position: absolute;
-  inset: 0;
+  /* Slight overscan covers fractional-pixel gaps on transformed right/left edges. */
+  inset: -1px;
   z-index: 1;
   pointer-events: none;
   transform-origin: 50% 50%;
@@ -411,18 +414,31 @@ body::-webkit-scrollbar {
     inset 0 0 180px 80px rgba(10, 10, 15, calc(0.16 * var(--vignette-intensity)));
 }
 
-/* Kohli carry: softer symmetric vignette avoids right-edge dark strip artifacts. */
+/* Kohli carry: match cinematic frame strength while keeping edge artifacts controlled. */
 .story-beat-rail__vignette-wrap--beat-kohli_carry .story-beat-rail__vignette-overlay {
-  background: radial-gradient(
-    ellipse 76% 72% at 50% 50%,
-    rgba(10, 10, 15, 0) 40%,
-    rgba(10, 10, 15, calc(0.2 * var(--vignette-intensity))) 62%,
-    rgba(10, 10, 15, calc(0.38 * var(--vignette-intensity))) 82%,
-    rgba(10, 10, 15, calc(0.52 * var(--vignette-intensity))) 100%
-  );
+  background:
+    radial-gradient(
+      ellipse 75% 71% at 50% 50%,
+      rgba(10, 10, 15, 0) 38%,
+      rgba(10, 10, 15, calc(0.24 * var(--vignette-intensity))) 60%,
+      rgba(10, 10, 15, calc(0.54 * var(--vignette-intensity))) 80%,
+      rgba(10, 10, 15, calc(0.78 * var(--vignette-intensity))) 94%,
+      rgba(10, 10, 15, calc(0.9 * var(--vignette-intensity))) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(10, 10, 15, 0) 75%,
+      rgba(10, 10, 15, calc(0.26 * var(--vignette-intensity))) 90%,
+      rgba(10, 10, 15, calc(0.52 * var(--vignette-intensity))) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(10, 10, 15, 0) 92%,
+      rgba(10, 10, 15, calc(0.48 * var(--vignette-intensity))) 100%
+    );
   box-shadow:
-    inset 0 0 32px 12px rgba(10, 10, 15, calc(0.22 * var(--vignette-intensity))),
-    inset 0 0 78px 34px rgba(10, 10, 15, calc(0.12 * var(--vignette-intensity)));
+    inset 0 0 34px 12px rgba(10, 10, 15, calc(0.34 * var(--vignette-intensity))),
+    inset 0 0 84px 36px rgba(10, 10, 15, calc(0.2 * var(--vignette-intensity)));
 }
 
 /**

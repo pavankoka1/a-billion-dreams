@@ -224,6 +224,11 @@ export default function ParticlePortrait({
    */
   finaleFormMorph = false,
   /**
+   * Optional scroll-scrub progress for `toImage` in [0,1].
+   * When provided, morphing follows scroll distance instead of wall-clock time.
+   */
+  scrollMorphProgress = null,
+  /**
    * Mid-story (before finale scroll): no silhouette morph — flowing “living canvas” motion only.
    */
   storyAmbientOnly = false,
@@ -293,6 +298,7 @@ export default function ParticlePortrait({
   visualRef.current.storyToImageEase = storyToImageEase;
   visualRef.current.storyToImageDurationMs = storyToImageDurationMs ?? null;
   visualRef.current.finaleFormMorph = finaleFormMorph;
+  visualRef.current.scrollMorphProgress = scrollMorphProgress;
   visualRef.current.storyAmbientOnly = storyAmbientOnly;
   visualRef.current.finaleFlatScatter = finaleFlatScatter;
   visualRef.current.verseAmbientIntensity = verseAmbientIntensity;
@@ -378,10 +384,15 @@ export default function ParticlePortrait({
     const lh = s.layoutSvgH ?? 880;
 
     const elapsed = timeMs - animStart;
+    const scrollT = visualRef.current.scrollMorphProgress;
+    const hasScrollMorphT =
+      typeof scrollT === "number" && Number.isFinite(scrollT);
     const rawT =
       phase === "scatter" || phase === "image"
         ? 1
-        : Math.min(1, elapsed / duration);
+        : phase === "toImage" && hasScrollMorphT
+          ? Math.min(1, Math.max(0, scrollT))
+          : Math.min(1, elapsed / duration);
     const easeMode = visualRef.current.storyToImageEase ?? "easeInCubic";
     const t =
       phase === "toImage"
@@ -518,7 +529,7 @@ export default function ParticlePortrait({
       },
     );
 
-    if (phase === "toImage" && rawT >= 1) {
+    if (phase === "toImage" && rawT >= 1 && !hasScrollMorphT) {
       s.phase = "image";
       for (let i = 0; i < n; i++) {
         const p = particles[i];
@@ -604,6 +615,7 @@ export default function ParticlePortrait({
     const { particles, phase } = s;
     const forceReseed = opts?.forceReseed === true;
     const forceFlatScatter = opts?.forceFlatScatter === true;
+    const instant = opts?.instant === true;
     const useFlatScatter =
       forceFlatScatter || visualRef.current.finaleFlatScatter === true;
     if (particles.length === 0) return;
@@ -678,6 +690,15 @@ export default function ParticlePortrait({
         p.scatterZone = undefined;
       }
     }
+    if (instant) {
+      s.phase = "scatter";
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x = p.rx;
+        p.y = p.ry;
+      }
+      return;
+    }
     s.phase = "toScatter";
     s.animStart = now;
     if (useFlatScatter) {
@@ -690,10 +711,11 @@ export default function ParticlePortrait({
    * their current positions to these new uniform homes via `toScatter`, so the handoff reads as a
    * dissolve — not a teleport. Subsequent `toImage` starts from this flat field.
    */
-  const beginFlatScatterTransition = useCallback(() => {
+  const beginFlatScatterTransition = useCallback((instant = false) => {
     beginScatterTransition(true, {
       forceReseed: true,
       forceFlatScatter: true,
+      instant,
     });
   }, [beginScatterTransition]);
 
@@ -705,7 +727,9 @@ export default function ParticlePortrait({
   useEffect(() => {
     if (status !== "ready") return;
     if (finaleFlatScatter) {
-      beginFlatScatterTransition();
+      const instantOnEnter =
+        particlePortraitConfig.finaleFlatScatterInstantOnEnter !== false;
+      beginFlatScatterTransition(instantOnEnter);
       flatScatterArmedRef.current = true;
     } else if (flatScatterArmedRef.current) {
       beginScatterTransition(true, { forceReseed: true });

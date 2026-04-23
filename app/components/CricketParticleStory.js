@@ -36,23 +36,29 @@ const SCROLL_FADE_OUT = 0.3;
 const OPENING_LANDING_K = 0.035;
 
 /**
- * Finale scroll (u = k − (n−1), k ≥ n−1): copy reads like any other chapter — fade-in, word-by-word
- * color, hold, then fade-out as the duo portrait forms.
+ * Finale scroll (u = k − (n−1), k ≥ n−1):
+ * - 0 → morphStart: text animates while particles stay scattered behind it
+ * - morphStart → 1: scroll-scrubbed duo morph progression
  */
 /** Text opacity 0→1 from u=0 → `FADEIN_END` (matches regular chapters' fade-in feel). */
-const FINALE_U_FADEIN_END = 0.1;
+const FINALE_U_MORPH_START = Math.min(
+  0.95,
+  Math.max(0.05, particlePortraitConfig.storyFinaleMorphStartU ?? 0.2),
+);
+const FINALE_U_FADEIN_END = Math.min(0.08, FINALE_U_MORPH_START * 0.35);
 /** Word color head 0→w over `[FADEIN_END, WORDS_END]` — all finale words lit well before the morph. */
-const FINALE_U_WORDS_END = 0.55;
+const FINALE_U_WORDS_END = Math.max(
+  FINALE_U_FADEIN_END + 0.01,
+  FINALE_U_MORPH_START * 0.8,
+);
 /** Text begins fading out here so the scatter has the stage long before the morph. */
-const FINALE_U_HOLD_END = 0.7;
+const FINALE_U_HOLD_END = FINALE_U_WORDS_END;
 /** Copy fully faded — from here until the morph trigger, only the full-page scatter is on screen. */
-const FINALE_U_TEXT_OUT_END = 0.82;
+const FINALE_U_TEXT_OUT_END = FINALE_U_MORPH_START;
 /**
- * Morph trigger — particles form the duo portrait only at the bottom of the finale section.
- * Before this, dots scatter across the whole viewport; after it, the time-based morph pulls
- * them directly into place (no intermediate transition).
+ * Morph trigger: particles start forming the duo after text window completes.
  */
-const FINALE_U_IMAGE_SCATTER_END = 0.92;
+const FINALE_U_IMAGE_SCATTER_END = FINALE_U_MORPH_START;
 /** Finale chapter starts rendering (fade-in pre-roll) at `k = n - 1 - PRE_ROLL` so there's no blank gap. */
 const FINALE_PRE_ROLL_K = 0.5;
 
@@ -144,6 +150,9 @@ function useScrollMetrics() {
   const [scrollY, setScrollY] = useState(() =>
     typeof window !== "undefined" ? window.scrollY : 0,
   );
+  const [viewportH, setViewportH] = useState(() =>
+    typeof window !== "undefined" ? window.innerHeight : 1,
+  );
   const [docMax, setDocMax] = useState(() => {
     if (typeof window === "undefined" || typeof document === "undefined") {
       return 1;
@@ -154,6 +163,7 @@ function useScrollMetrics() {
 
   const update = () => {
     setScrollY(window.scrollY);
+    setViewportH(Math.max(1, window.innerHeight));
     const el = document.documentElement;
     setDocMax(Math.max(1, el.scrollHeight - window.innerHeight));
   };
@@ -175,7 +185,7 @@ function useScrollMetrics() {
   }, []);
 
   const scrollProgress = docMax > 0 ? clamp(scrollY / docMax, 0, 1) : 0;
-  return { scrollY, scrollProgress, docMax };
+  return { scrollY, scrollProgress, docMax, viewportH };
 }
 
 function wordColor(wordIndex, head, reduced) {
@@ -330,7 +340,7 @@ function LitChapter({
 }
 
 export default function CricketParticleStory() {
-  const { scrollY, scrollProgress, docMax } = useScrollMetrics();
+  const { scrollY, scrollProgress, docMax, viewportH } = useScrollMetrics();
   const prefersReducedMotion = usePrefersReducedMotion();
   const firstImage = STORY_CONFIG.firstImageChapter;
   const n = storyChapters.length;
@@ -532,6 +542,24 @@ export default function CricketParticleStory() {
     );
   }, [isFinaleScroll, finalePhase, finaleScrollU]);
 
+  /**
+   * Finale duo formation progress controlled by physical scroll distance (`vh`), not wall-clock time.
+   * This keeps the morph directly scrubbed by the user's scroll direction/speed.
+   */
+  const finaleScrollMorphProgress = useMemo(() => {
+    if (!finaleImageForming) return null;
+    const morphStartK = n - 1 + FINALE_U_IMAGE_SCATTER_END;
+    const morphStartY = (morphStartK / n) * docMax;
+    const configuredVh = Math.max(
+      1,
+      particlePortraitConfig.storyFinaleMorphScrollVh ?? 50,
+    );
+    const configuredSpanPx = (configuredVh / 100) * Math.max(1, viewportH);
+    const maxAvailableSpanPx = Math.max(1, docMax - morphStartY);
+    const spanPx = Math.min(configuredSpanPx, maxAvailableSpanPx);
+    return clamp((scrollY - morphStartY) / spanPx, 0, 1);
+  }, [finaleImageForming, n, docMax, viewportH, scrollY]);
+
   /** Mid-story: flowing particles without silhouettes; finale reserves the portrait morph. */
   const storyAmbientOnly = portraitMode && !isFinaleScroll;
 
@@ -546,6 +574,9 @@ export default function CricketParticleStory() {
   }, [storyAmbientOnly, portraitBandU, portraitHoldScatter]);
 
   const scatterAlphaScale = useMemo(() => {
+    if (isFinaleScroll) {
+      return Math.max(0.05, particlePortraitConfig.finaleScatterAlphaScale ?? 1.4);
+    }
     if (storyChapterIndex < firstImage) {
       return particlePortraitConfig.openingScatterAlpha ?? 0;
     }
@@ -554,13 +585,24 @@ export default function CricketParticleStory() {
       0.94,
       0.02 + scrollProgress * 1.15 + storyChapterIndex * 0.055,
     );
-  }, [storyChapterIndex, firstImage, portraitMode, scrollProgress]);
+  }, [storyChapterIndex, firstImage, portraitMode, scrollProgress, isFinaleScroll]);
 
   const particleColorRgb = useMemo(() => {
     if (storyChapterIndex === 0) return openingHeaderDotColorRgb;
+    if (isFinaleScroll && finalePhase === "image") {
+      return (
+        particlePortraitConfig.finaleImageParticleColorRgb ?? particleThemeColorRgb
+      );
+    }
+    if (isFinaleScroll) {
+      return (
+        particlePortraitConfig.finaleScatterParticleColorRgb ??
+        scatterAmbientParticleColorRgb
+      );
+    }
     if (portraitMode) return scatterAmbientParticleColorRgb;
     return particleThemeColorRgb;
-  }, [storyChapterIndex, portraitMode]);
+  }, [storyChapterIndex, portraitMode, isFinaleScroll, finalePhase]);
 
   /** Split stage only from chapter index 2 onward (rail beats); opening + “wait” stay centered. */
   const showDotsRightGutter =
@@ -618,6 +660,7 @@ export default function CricketParticleStory() {
               ? particlePortraitConfig.storyFinaleToImageMs
               : undefined
           }
+          scrollMorphProgress={finaleScrollMorphProgress}
           finaleFormMorph={finaleImageForming}
           storyAmbientOnly={storyAmbientOnly}
           verseAmbientIntensity={verseAmbientIntensity}

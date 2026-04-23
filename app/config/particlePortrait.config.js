@@ -5,8 +5,11 @@
 /** Default beat dots (non–portrait-mode chapters if any). */
 export const particleThemeColorRgb = [204 / 255, 204 / 255, 207 / 255];
 
-/** Portrait scatter — dim, near canvas bg. */
-export const scatterAmbientParticleColorRgb = [62 / 255, 64 / 255, 72 / 255];
+/**
+ * Portrait scatter — visible on dark bg but intentionally softer than text.
+ * Tuned cool-indigo so motion reads without stealing copy focus.
+ */
+export const scatterAmbientParticleColorRgb = [88 / 255, 100 / 255, 140 / 255];
 
 /** Opening header line. */
 export const openingHeaderDotColorRgb = [113 / 255, 113 / 255, 122 / 255];
@@ -88,6 +91,34 @@ export const particlePortraitConfig = {
   storyFinaleToImageMs: 1400,
 
   /**
+   * Scroll-driven finale morph span in viewport height units.
+   * Example: `50` means the duo forms over 50vh of scrolling.
+   */
+  storyFinaleMorphScrollVh: 100,
+
+  /**
+   * Finale segment threshold (0..1) where duo morph starts.
+   * 0.2 means: first 20% = text + scatter only, then morph begins.
+   */
+  storyFinaleMorphStartU: 0.2,
+
+  /**
+   * Finale text-window scatter color (0..1 RGB). Tuned brighter than ambient so
+   * particles remain visible behind the finale copy.
+   */
+  finaleScatterParticleColorRgb: [172 / 255, 186 / 255, 236 / 255],
+
+  /**
+   * Finale image/morph color (0..1 RGB). Crisp near-white with cool tint.
+   */
+  finaleImageParticleColorRgb: [232 / 255, 238 / 255, 255 / 255],
+
+  /**
+   * Multiplies scatter alpha during finale text window so the field reads clearly.
+   */
+  finaleScatterAlphaScale: 1.4,
+
+  /**
    * When `true`, the duo morph is an elegant per-particle travel: random (not radial) stagger so no
    * silhouette-wipe is visible, a perpendicular Bézier-style arc for graceful crossing paths, and a
    * smooth S-curve ease. The transition is intriguing but **never** forms an intermediate structure.
@@ -102,6 +133,12 @@ export const particlePortraitConfig = {
 
   /** Transition length for the "uniform flat scatter" re-seed tween (ms). */
   finaleFlatScatterInMs: 900,
+
+  /**
+   * When true, entering finale scatter snaps dots directly to full-screen random
+   * positions (no center-biased handoff tween).
+   */
+  finaleFlatScatterInstantOnEnter: true,
 
   /** Legacy non-direct morph path (unused when `finaleMorphDirect` is on). */
   finaleMorphRadialWeight: 0.72,
@@ -139,7 +176,7 @@ export const particlePortraitConfig = {
    *   <1   → softer / lighter frame
    *   >1   → heavier / more cinematic (clamp at ~1.6 — alphas cap at 1.0 anyway)
    */
-  storyBeatRailVignetteIntensity: 1.5,
+  storyBeatRailVignetteIntensity: 1.6,
 
   /**
    * Per beat id (`CHAPTER_TARGET_BEATS`): partial overrides. Omitted keys use defaults above.
